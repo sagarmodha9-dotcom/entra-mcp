@@ -1,6 +1,6 @@
 # entra-mcp
 
-A read-only [MCP](https://modelcontextprotocol.io) server that lets an AI client (Claude Desktop) answer help-desk
+An approval-gated [MCP](https://modelcontextprotocol.io) server that lets an AI client (Claude Desktop) answer help-desk
 questions from a live Microsoft Entra ID + Intune tenant over Microsoft Graph v1.0: is this user enabled, when did
 they last sign in, what groups and MFA methods do they have, what did their recent sign-ins look like, what devices
 do they own.
@@ -11,7 +11,11 @@ registry (strict schemas) â†’ policy gate (endpoint allowlist + target guard) â†
 no tool that takes a URL, a Graph path or a query string, and no tool can wipe, retire or delete anything.
 
 Status: see `EVIDENCE.md`, which is written only by the live test scripts and prints its own "N of M tools
-live-validated" line. Nothing in this README claims a tool works unless that file recorded it.
+live-validated" line. Nothing in this README claims a tool works unless that file recorded it. The full status by
+category (implemented / mock-tested / live-tested / pending / blocked), the remaining blockers and the release
+checklist are in `ACCEPTANCE.md`. A ten-minute walkthrough of what a reviewer sees is in `DEMO.md`.
+
+![architecture](docs/architecture.svg)
 
 ## How a write happens
 
