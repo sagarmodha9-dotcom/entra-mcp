@@ -1,0 +1,39 @@
+# entra-mcp milestone 1 configuration. No secrets here: the client secret lives in the macOS Keychain
+# (service "entra-mcp-readonly", account "sagar"); see README.
+# Tenant id and client id are public-safe identifiers, not credentials.
+
+[tenant]
+tenant_id = "62130626-d5e3-46c4-8381-7fdab8d1714b"
+client_id = "e3b405e7-7731-4165-b6cc-9a9ee83d36c6"
+domain = "ModhaAILabs.onmicrosoft.com"      # the only UPN domain the schemas accept
+
+[keychain]
+service = "entra-mcp-readonly"
+account = "sagar"
+
+[guard]
+# Deny list, checked before any Graph call. Writes do not exist in milestone 1; reads against these
+# accounts are refused as well, so the read server can never be used to profile the admins.
+protected_upns = ["SagarModha@ModhaAILabs.onmicrosoft.com", "ops.admin@ModhaAILabs.onmicrosoft.com"]
+cache_seconds = 60
+
+[devices]
+# Intune device ids that milestone 4's actions (sync, reboot) will be allowed to touch. Unused by the
+# milestone-1 reads; present so the config shape is settled now.
+test_device_ids = []
+
+[limits]
+timeout_seconds = 30     # auditLogs/signIns was observed at 5-8 s on the trial tenant
+page_size = 20
+max_retries = 3
+
+[audit]
+path = "audit/entra-mcp.jsonl"
+
+[writes]
+# Milestones 2-4. Second app registration (entra-mcp-writes), DELEGATED permissions only, device-code sign-in by
+# the operator with `entra-mcp login`. Leave client_id empty to run the read-only server (milestone 1) alone.
+client_id = "c2fee14d-e4a4-4aae-aa15-c439ce1f506b"
+token_cache = "~/Library/Application Support/entra-mcp/msal_cache.bin"   # MSAL cache, mode 0600, outside the repo
+approvals = "audit/approvals.json"                                        # proposal store, gitignored
+approval_ttl_seconds = 600

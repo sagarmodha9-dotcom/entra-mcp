@@ -1,0 +1,28 @@
+[project]
+name = "entra-mcp"
+version = "0.1.0"
+description = "Approval-gated MCP server for Microsoft Entra ID and Intune over Microsoft Graph: 7 reads, 7 identity writes behind human approval, 2 device actions"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=2.0",
+    "msal>=1.31",
+    "requests>=2.32",
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+entra-mcp = "entra_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
