@@ -70,8 +70,9 @@ Things Graph cannot do, stated in the tool descriptions rather than papered over
 - `auditLogs/signIns` filtered by user is slow and occasionally stalls: 9–19 s per call on this tenant, with a
   30 s timeout on roughly one call in three across the recorded runs (one run saw none after the server stopped
   sending a `ConsistencyLevel: eventual` header; the next run saw one again, so the header was not the whole
-  story). The read client retries once with backoff and then returns a clear error; the tool description tells
-  the model to expect the wait. Logs are kept 30 days on Entra ID P1.
+  story), and one 61 s outlier in the next-day run. This template now has its own budget (20 s per attempt, one
+  retry): a stall becomes `status: unavailable` with a reason after at most ~40 s instead of an error after a
+  minute. The tool description tells the model to expect the wait. Logs are kept 30 days on Entra ID P1.
 - `signInActivity` reads occasionally stall for the full 30 s timeout (2 of 20 calls in each recorded run) and
   succeed on retry; p50 stays around 1 s.
 
@@ -123,6 +124,10 @@ Stated plainly so nobody reads more into the approval flow than it provides.
 - **Test-user secrets that reach a terminal get pasted.** The live scripts now mask generated passwords and TAPs
   unless `--show-secrets` is passed. Two of Carol's temporary passwords and one TAP were exposed through pasted
   output during development; the password was reset again and the TAP deleted afterwards.
+
+## Release hygiene
+
+`scripts/scan_history.sh` scans every commit in the published history for the values that were once pasted into a chat, for secret shapes (client secrets, JWTs, private keys, MSAL cache), and for files that must never have been tracked; `tests/verify_cleanup.py` proves, read-only, that the exposed test credentials are dead. Both results are recorded in `ACCEPTANCE.md` §3.
 
 ## Evidence
 

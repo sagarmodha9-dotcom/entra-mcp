@@ -216,3 +216,20 @@ def test_a6_unexpected_exception_becomes_a_tool_error(engine):
     with pytest.raises(ToolError) as ei:
         engine.run("get_device", {"device_id": DEVICE_ID})
     assert ei.value.code == "internal" and "boom" not in str(ei.value)
+
+
+def test_a6_sign_in_logs_have_a_20s_budget_and_one_retry(engine):
+    from entra_mcp.graph import TransportError
+    seen = []
+    real = engine.graph._send
+
+    def slow(method, url, headers, timeout, body=None):
+        if "auditLogs/signIns" not in url:            # guard/user lookups answer normally
+            return real(method, url, headers, timeout, body)
+        seen.append(timeout)
+        raise TransportError("ReadTimeout")
+    engine.graph._send = slow
+    r = engine.run("get_sign_in_logs", {"upn": ALICE, "days": 7})
+    assert r["status"] == "unavailable" and "20 s" in r["reason"]
+    assert seen == [20.0, 20.0], seen            # two attempts at 20 s each, never the 30 s x 4 default
+    assert engine.audit.read_all()[-1]["decision"] == "allowed"   # a clear answer, not a crash

@@ -103,6 +103,11 @@ class GraphClient:
     #: cannot send a write template, whatever token it holds.
     allowed: frozenset[str] = READ_TEMPLATES
 
+    #: per-template budgets for endpoints that are known to be slow: (timeout seconds, retries). The sign-in log
+    #: query took 9-19 s with occasional 60 s stalls on the trial tenant; 20 s + 1 retry caps the wait at ~40 s
+    #: instead of 30 s x 4 and turns a stall into a fast, explicit `unavailable` answer.
+    BUDGETS: dict[str, tuple[float, int]] = {"sign_in_logs": (20.0, 1)}
+
     def get(self, template: str, **values: object) -> object:
         """GET an allowlisted read template. Refuses any template whose method is not GET."""
         if TEMPLATES.get(template) is None or TEMPLATES[template].method != "GET":
@@ -114,26 +119,28 @@ class GraphClient:
         if template not in self.allowed:
             raise AllowlistError(f"this client may not execute template {template!r}")
         method = TEMPLATES[template].method
+        timeout, retries = self.BUDGETS.get(template, (self.cfg.timeout_seconds, self.cfg.max_retries))
+        retries = min(retries, self.cfg.max_retries)
         url = build_url(template, **values)
         headers = {"Authorization": f"Bearer {self._token()}", "Accept": "application/json"}
         delay = 1.0
-        for attempt in range(self.cfg.max_retries + 1):
+        for attempt in range(retries + 1):
             self.calls += 1
             t_req = time.perf_counter()
             try:
-                resp = self._send(method, url, headers, self.cfg.timeout_seconds, body)
+                resp = self._send(method, url, headers, timeout, body)
                 self.timings.append((template, int((time.perf_counter() - t_req) * 1000), resp.status))
             except TransportError as e:
                 self.timings.append((template, int((time.perf_counter() - t_req) * 1000), "timeout"))
                 self.last_status, self.last_request_id = 0, ""
-                if attempt < self.cfg.max_retries:
+                if attempt < retries:
                     self._sleep(min(delay, 30.0))
                     delay *= 2
                     continue
                 raise GraphError(0, "no_response", f"{_MESSAGES[0]} ({e})") from None
             self.last_status = resp.status
             self.last_request_id = resp.headers.get("request-id", "") or resp.headers.get("client-request-id", "")
-            if resp.status in (429, 503) and attempt < self.cfg.max_retries:
+            if resp.status in (429, 503) and attempt < retries:
                 retry_after = resp.headers.get("retry-after")
                 self._sleep(min(float(retry_after) if retry_after else delay, 30.0))
                 delay *= 2

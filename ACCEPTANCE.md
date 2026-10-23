@@ -10,7 +10,7 @@ Status vocabulary, used exactly:
 | **pending** | code is in place; its live row waits on a precondition that has not happened yet |
 | **blocked** | cannot progress until something outside the code changes |
 
-Mocked suite: **95 passed** (`tests/unit_results.md`). Live runs: milestone 1 (`live_m1.py`), milestones 2–4 (`live_m23.py`),
+Mocked suite: **96 passed** (`tests/unit_results.md`). Live runs: milestone 1 (`live_m1.py`), milestones 2–4 (`live_m23.py`),
 Claude Desktop recorder (`record_c10.py`). Dates are in the result files. No live identity write was performed to fill this
 matrix; every live row below cites a run that already happened.
 
@@ -30,7 +30,8 @@ matrix; every live row below cites a run that already happened.
 | item | implemented | mock-tested | live-tested |
 |---|---|---|---|
 | Write client sends each write exactly once (`max_retries=0`), no retry on timeout, 429 or 5xx | `graph.WriteGraphClient` | W12: 503 → one request; timeout → one request, `uncertain` | not exercised live (no failures occurred in the recorded runes except the 400 above, which was not retried) |
-| Read client still retries 429/503/timeouts with backoff (idempotent GETs) | `graph.GraphClient` | A6 ×3 | C-layer runs recovered from 30 s stalls on `get_last_sign_in` and `get_sign_in_logs` by retry; one `get_sign_in_logs` call per run still exceeds the single-retry budget (recorded as a tool error, p95 61 s) |
+| Read client still retries 429/503/timeouts with backoff (idempotent GETs) | `graph.GraphClient` | A6 ×3 | C-layer runs recovered from 30 s stalls on `get_last_sign_in` by retry |
+| Sign-in log query has its own budget: 20 s per attempt, one retry, then `status: unavailable` with a reason (never a crash, never a 60 s+ wait) | `GraphClient.BUDGETS["sign_in_logs"]` | A6 budget test (two attempts at 20 s, clear answer) | the 61 s outlier (`get_sign_in_logs`, next-day run) is what this closes; not yet observed live under the new budget |
 
 ## 3. Sanitized output and credential rotation
 
@@ -40,9 +41,10 @@ matrix; every live row below cites a run that already happened.
 | Results writers mask non-test UPNs, truncate GUIDs, drop response bodies | implemented, live-tested | `tests/live_results*.md` reviewed; admin activity reduced to counts in `live_results_validate.md` |
 | Live scripts mask generated passwords/TAPs on screen unless `--show-secrets` | implemented | added after two of Carol's temporary passwords and one TAP were pasted into a chat from Terminal output |
 | Read app client secret | **rotated** (live): first secret partially exposed in chat → deleted in the portal, new secret issued, stored in Keychain (length 40 verified) | this conversation; `security find-generic-password` |
-| Carol.Test temporary passwords (2) and TAP (1) exposed via pasted output | **pending your action**: portal reset of Carol's password (do not copy it) and deletion of the TAP method | test account, no licence, no data; TAP was one-time/60 min and has expired by the time you read this |
+| Carol.Test temporary passwords (2) and TAP (1) exposed via pasted output | **pending your action**, then **verified read-only**: portal reset of Carol's password (do not copy it) and deletion of the TAP method; `python tests/verify_cleanup.py` then proves `lastPasswordChangeDateTime` is later than the last tool-issued reset and no TAP method remains (X1–X3 rows in `live_results_m23.md`) | test account, no licence, no data; TAP was one-time/60 min and has expired regardless |
 | Operator refresh token on disk | implemented: MSAL cache, mode 0600, outside the repo; `entra-mcp logout` deletes it | README trust boundary |
 | Repo pre-commit secret scan | clean: the only `8Q~`/`eyJ` matches are the redaction regexes and test fixtures | `grep` run before the first commit |
+| Published git history scan (every commit, every blob, not just HEAD) | `scripts/scan_history.sh`: exposed values, secret shapes, never-tracked files, optional gitleaks | result recorded below when run |
 
 ## 4. Temporary Access Pass visibility (M3-5b)
 
@@ -68,11 +70,12 @@ matrix; every live row below cites a run that already happened.
 - [x] Token cache lives outside the repo (`~/Library/Application Support/entra-mcp/`)
 - [x] Client secret only in the macOS Keychain; `config.toml` holds tenant id, client ids and domain (public-safe identifiers)
 - [x] Pre-commit grep for `8Q~` / `eyJ` shows only the redaction regexes and fixtures
+- [ ] `scripts/scan_history.sh` reports CLEAN over the pushed history; GitHub secret scanning + push protection enabled (Settings → Code security)
 - [x] Result files name only the fictional test users; admin UPNs masked; GUIDs truncated; no IPs; no response bodies
 - [x] README states the trust boundary and known risks
 - [x] `EVIDENCE.md` is written only by the live scripts and prints its own tool counts
-- [ ] Create the GitHub repository and push (`git push -u origin main`)
-- [ ] Carol.Test: portal password reset + TAP deletion (then nothing exposed remains valid)
+- [x] Create the GitHub repository and push (`git push -u origin main`)
+- [ ] Carol.Test: portal password reset + TAP deletion, then `python tests/verify_cleanup.py` → X1–X3 PASS
 - [ ] Next-day `live_m1.py` run to close C2; next scheduled `live_m23.py` run to close M3-5b
 - [ ] Device milestone when a disposable device exists
 
@@ -81,5 +84,5 @@ matrix; every live row below cites a run that already happened.
 1. **A disposable enrolled device.** Options: a macOS VM (UTM/Parallels) enrolled through Company Portal, which first needs an Apple MDM push certificate on the tenant and Intune's MDM authority set; or a Windows 11 VM enrolled manually (no Apple certificate needed). Alice.Test is the licensed user to enrol as. Until then C6, C7, M4-1, M4-2 stay pending and `list_devices`/`get_device`/`sync_device`/`reboot_device` are not described as validated anywhere.
 2. **Graph property lag** on `signInActivity` (documented 24 h): closes itself; re-run `live_m1.py`.
 3. **One more TAP write** to confirm M3-5b under the polling check: deliberately deferred.
-4. **Carol.Test credential cleanup** in the portal: your two clicks.
+4. **Carol.Test credential cleanup** in the portal: your two clicks, then `verify_cleanup.py` records the proof.
 5. **Layer D** measurements: not a blocker for the release, listed so the README never implies it was done.

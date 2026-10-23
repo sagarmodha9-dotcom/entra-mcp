@@ -212,6 +212,11 @@ class Engine:
             if e.status == 403:
                 return {"userPrincipalName": t.upn, "status": "unavailable",
                         "reason": "sign-in logs refused (403): needs Entra ID P1 and AuditLog.Read.All"}
+            if e.status == 0:
+                return {"userPrincipalName": t.upn, "status": "unavailable",
+                        "reason": "Graph's sign-in log query did not answer within the 20 s budget (twice). This endpoint "
+                                  "is slow on this tenant (9-19 s typical, occasional stalls); try again, or narrow "
+                                  "days/top."}
             raise
         rows = []
         for s in r.get("value", []) if isinstance(r, dict) else []:

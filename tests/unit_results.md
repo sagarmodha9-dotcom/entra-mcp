@@ -2,8 +2,8 @@
 
 These tests never contact Microsoft. Graph is an HTTP mock that records every request and fails the suite on anything but GET. They prove what the SERVER does; they prove nothing about the tenant. Live tenant evidence is in `tests/live_results.md` and `EVIDENCE.md`, produced by `tests/live_m1.py`.
 
-Run: 2026-10-23 00:10 UTC  Python 3.12.15  
-Result: **95 passed, 0 failed, 95 tests**
+Run: 2026-10-23 00:28 UTC  Python 3.12.15  
+Result: **96 passed, 0 failed, 96 tests**
 
 | layer | test | result |
 |---|---|---|
@@ -30,6 +30,7 @@ Result: **95 passed, 0 failed, 95 tests**
 | A protocol | `test_a7_every_call_including_refusals_writes_one_line_with_documented_fields` | passed |
 | A protocol | `test_a6_timeout_is_retried_then_surfaced_without_crashing` | passed |
 | A protocol | `test_a6_unexpected_exception_becomes_a_tool_error` | passed |
+| A protocol | `test_a6_sign_in_logs_have_a_20s_budget_and_one_retry` | passed |
 | B server authorization | `test_b1_deny_listed_admin_refused_with_zero_graph_calls` | passed |
 | B server authorization | `test_b1_role_holder_refused_before_the_tool_request` | passed |
 | B server authorization | `test_b1_guard_fails_closed_when_a_lookup_errors` | passed |
