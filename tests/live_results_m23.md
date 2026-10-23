@@ -42,6 +42,6 @@ Mocked results for this layer are in `tests/unit_results.md` (layer W). This fil
 {"ts": "2026-10-22T23:54:24.842+00:00", "tool": "disable_account", "args": {"upn": "<upn>", "reason": "LIVE-M2-4 must be refused"}, "target": "<upn>", "decision": "refused", "graph_status": 200, "graph_calls": 0, "latency_ms": 0, "request_id": "c93a30c9-809c-4dcc-9c8c-39a683e6d468", "error": "protected: this account is protected by the server's deny list; no tool may target it"}
 ```
 | W-E2E | Claude Desktop write flow (2026-10-22 23:58 UTC) | PASS | tool=revoke_sessions target=<test user> proposal graph_calls=0; approved_by=cli:sagarmodha (Terminal), executed_as=<operator>, approve graph_status=200, request_id=0a6f38de-1136-4a11-aab7-532731a1b09c |
-| X1 | carol.test password changed AFTER the last tool-issued reset (exposed temp passwords dead) (2026-10-23 00:28 UTC) | FAIL | last tool reset 2026-10-22T23:54:50+00:00; lastPasswordChangeDateTime 2026-10-22T23:54:46Z |
-| X2 | carol.test has no Temporary Access Pass method (exposed TAP gone) (2026-10-23 00:28 UTC) | FAIL | methods=['password', 'temporaryAccessPass'] |
-| X3 | read app secret present in Keychain (rotated in portal earlier; length check only) (2026-10-23 00:28 UTC) | PASS | length=40 |
+| X1 | carol.test password changed AFTER the last tool-issued reset (exposed temp passwords dead) (2026-10-23 00:30 UTC) | FAIL | last tool reset 2026-10-22T23:54:50+00:00; lastPasswordChangeDateTime 2026-10-22T23:54:46Z |
+| X2 | carol.test has no Temporary Access Pass method (exposed TAP gone) (2026-10-23 00:30 UTC) | FAIL | methods=['password', 'temporaryAccessPass'] |
+| X3 | read app secret present in Keychain (rotated in portal earlier; length check only) (2026-10-23 00:30 UTC) | PASS | length=40 |
