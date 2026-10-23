@@ -30,7 +30,7 @@ matrix; every live row below cites a run that already happened.
 | item | implemented | mock-tested | live-tested |
 |---|---|---|---|
 | Write client sends each write exactly once (`max_retries=0`), no retry on timeout, 429 or 5xx | `graph.WriteGraphClient` | W12: 503 → one request; timeout → one request, `uncertain` | not exercised live (no failures occurred in the recorded runes except the 400 above, which was not retried) |
-| Read client still retries 429/503/timeouts with backoff (idempotent GETs) | `graph.GraphClient` | A6 ×3 | C-layer runs recovered from two 30 s stalls on `get_last_sign_in` by retry |
+| Read client still retries 429/503/timeouts with backoff (idempotent GETs) | `graph.GraphClient` | A6 ×3 | C-layer runs recovered from 30 s stalls on `get_last_sign_in` and `get_sign_in_logs` by retry; one `get_sign_in_logs` call per run still exceeds the single-retry budget (recorded as a tool error, p95 61 s) |
 
 ## 3. Sanitized output and credential rotation
 
@@ -55,7 +55,7 @@ matrix; every live row below cites a run that already happened.
 
 | check | status | what closes it |
 |---|---|---|
-| C2 `get_last_sign_in` for Alice returns a timestamp | **pending**: Graph's `signInActivity` is documented as updating up to 24 h after a sign-in; the tool returns `status: unknown` honestly meanwhile | `python tests/live_m1.py` the next day |
+| C2 `get_last_sign_in` for Alice returns a timestamp | **pending**: Graph's `signInActivity` is documented as updating up to 24 h after a sign-in; still `unknown` 4 h after her first sign-in; the tool returns `status: unknown` honestly meanwhile | `python tests/live_m1.py` the next day |
 | C4, C5 (auth methods, sign-in logs) | live-tested | |
 | C6 `list_devices`, C7 `get_device` | **blocked**: no device enrolled in Intune | enrol a disposable device (see blockers) |
 | M4-0 device outside `test_device_ids` refused with 0 Graph calls | live-tested | |

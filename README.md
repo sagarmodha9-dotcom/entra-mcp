@@ -67,10 +67,11 @@ Things Graph cannot do, stated in the tool descriptions rather than papered over
   `get_sign_in_logs`. `status: unavailable` is returned when the tenant lacks P1 / the permission (403).
   Observed live: Alice's sign-ins were visible in the sign-in log within minutes while `signInActivity` was still
   empty two hours later.
-- `auditLogs/signIns` filtered by user is slow: 12–16 s per call on this tenant. Three earlier runs also hit a
-  60 s timeout on one call in three; those disappeared when the server stopped sending a `ConsistencyLevel:
-  eventual` header on every request (none of the allowlisted queries need it). The server retries 429/503 and
-  transport timeouts with backoff and then returns a clear error. Logs are kept 30 days on Entra ID P1.
+- `auditLogs/signIns` filtered by user is slow and occasionally stalls: 9–19 s per call on this tenant, with a
+  30 s timeout on roughly one call in three across the recorded runs (one run saw none after the server stopped
+  sending a `ConsistencyLevel: eventual` header; the next run saw one again, so the header was not the whole
+  story). The read client retries once with backoff and then returns a clear error; the tool description tells
+  the model to expect the wait. Logs are kept 30 days on Entra ID P1.
 - `signInActivity` reads occasionally stall for the full 30 s timeout (2 of 20 calls in each recorded run) and
   succeed on retry; p50 stays around 1 s.
 
