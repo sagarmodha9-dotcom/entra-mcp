@@ -1,25 +1,21 @@
 # Evidence matrix: milestone 1 (read-only)
 
 Filled only by `tests/live_m1.py` from real Graph calls. 'Supported' is never written by hand.  
-Last live run: 2026-10-22 23:08 UTC. Mocked test totals are in `tests/unit_results.md` and are not evidence of tenant behaviour.
+Last live run: 2026-10-23 00:18 UTC. Mocked test totals are in `tests/unit_results.md` and are not evidence of tenant behaviour.
 
 **Status: 4 of 7 tools live-validated, 3 pending, 0 failed.** Not all seven are validated until the device rows pass.
 
 | tool | Graph endpoint | permission (app) | licence | role needed | live result (date) | latency p50 / p95 | limitations |
 |---|---|---|---|---|---|---|---|
-| get_user | GET /users/{upn}?$select=… | User.Read.All | Free | none | supported (2026-10-22) | 600 / 600 ms | no lockout flag exists in Graph |
-| get_last_sign_in | GET /users/{id}?$select=signInActivity (+ list form cross-check) | AuditLog.Read.All + User.Read.All | P1 | none | pending (2026-10-22) | 1104 / 30188 ms | property updates up to 24 h late (documented); 204/empty -> status=unknown, never 'never signed in' |
-| list_user_groups | GET /users/{id}/memberOf | Directory.Read.All | Free | none | supported (2026-10-22) | pending | direct memberships only |
-| list_auth_methods | GET /users/{id}/authentication/methods | UserAuthenticationMethod.Read.All | not stated by MS | none (app) | supported (2026-10-22) | 340 / 511 ms | phone masked, ids dropped |
-| get_sign_in_logs | GET /auditLogs/signIns?$filter=userId eq '{id}' and createdDateTime ge … | AuditLog.Read.All | P1 | none (app) | supported (2026-10-22) | 15356 / 16601 ms | 30-day retention; no IPs returned; slow endpoint, 12-16 s per call (60 s timeouts disappeared once the ConsistencyLevel header was dropped) |
-| list_devices | GET /deviceManagement/managedDevices[?$filter=userPrincipalName eq '{upn}'] | DeviceManagementManagedDevices.Read.All | Intune | none (app) | pending (2026-10-22) | 155 / 289 ms | UPN filter unverified until a device exists |
-| get_device | GET /deviceManagement/managedDevices/{id} | DeviceManagementManagedDevices.Read.All | Intune | none (app) | pending (2026-10-22) | pending | pending until a dedicated test device is enrolled |
+| get_user | GET /users/{upn}?$select=… | User.Read.All | Free | none | supported (2026-10-23) | 966 / 966 ms | no lockout flag exists in Graph |
+| get_last_sign_in | GET /users/{id}?$select=signInActivity (+ list form cross-check) | AuditLog.Read.All + User.Read.All | P1 | none | pending (2026-10-23) | 1285 / 2283 ms | property updates up to 24 h late (documented); 204/empty -> status=unknown, never 'never signed in' |
+| list_user_groups | GET /users/{id}/memberOf | Directory.Read.All | Free | none | supported (2026-10-23) | 782 / 782 ms | direct memberships only |
+| list_auth_methods | GET /users/{id}/authentication/methods | UserAuthenticationMethod.Read.All | not stated by MS | none (app) | supported (2026-10-23) | 430 / 663 ms | phone masked, ids dropped |
+| get_sign_in_logs | GET /auditLogs/signIns?$filter=userId eq '{id}' and createdDateTime ge … | AuditLog.Read.All | P1 | none (app) | supported (2026-10-23) | 18777 / 61353 ms | 30-day retention; no IPs returned; slow endpoint, 12-16 s per call (60 s timeouts disappeared once the ConsistencyLevel header was dropped) |
+| list_devices | GET /deviceManagement/managedDevices[?$filter=userPrincipalName eq '{upn}'] | DeviceManagementManagedDevices.Read.All | Intune | none (app) | pending (2026-10-23) | 175 / 356 ms | UPN filter unverified until a device exists |
+| get_device | GET /deviceManagement/managedDevices/{id} | DeviceManagementManagedDevices.Read.All | Intune | none (app) | pending (2026-10-23) | pending | pending until a dedicated test device is enrolled |
 
 Pending rows are pending because their precondition is not met yet (a sign-in by the test user, an Authenticator registration, an enrolled dedicated test device), not because the code is missing. They are closed only by a later run of the same script.
-
-
-Claude Desktop end to end (C10): PASS on 2026-10-22; allowed calls=['get_user', 'get_last_sign_in'] (graph_calls=[4, 2]); schema rejections before them=2 with 0 Graph calls; other decisions=0; model answered from tool data (enabled=True, last sign-in status reported as unknown, not 'never').
-Claude Desktop write flow (W-E2E): PASS on 2026-10-22; tool=revoke_sessions target=<test user> proposal graph_calls=0; approved_by=cli:sagarmodha (Terminal), executed_as=<operator>, approve graph_status=200, request_id=0a6f38de-1136-4a11-aab7-532731a1b09c.
 
 ## Milestones 2-4: approvals, identity writes, device actions
 
@@ -39,3 +35,7 @@ Last live run: 2026-10-22 23:55 UTC. Written only by `tests/live_m23.py`.
 | reboot_device | POST /deviceManagement/managedDevices/{id}/rebootNow | DeviceManagementManagedDevices.PrivilegedOperations.All (delegated) | Intune Help Desk Operator | pending (2026-10-22) | pending with M4-1; never run on the everyday Mac |
 | approve | none (executes a human-approved proposal) | n/a | n/a | supported (2026-10-22) | not_approved; Graph calls during refusal=0 |
 | list_pending_approvals | none | n/a | n/a | supported (2026-10-22) | 0 pending after denials |
+
+
+Claude Desktop end to end (C10): PASS on 2026-10-22; allowed calls=['get_user', 'get_last_sign_in'] (graph_calls=[4, 2]); schema rejections before them=2 with 0 Graph calls; other decisions=0; model answered from tool data (enabled=True, last sign-in status reported as unknown, not 'never').
+Claude Desktop write flow (W-E2E): PASS on 2026-10-22; tool=revoke_sessions target=<test user> proposal graph_calls=0; approved_by=cli:sagarmodha (Terminal), executed_as=<operator>, approve graph_status=200, request_id=0a6f38de-1136-4a11-aab7-532731a1b09c.

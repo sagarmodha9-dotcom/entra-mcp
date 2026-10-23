@@ -1,6 +1,6 @@
 # Milestone 1 acceptance: LIVE tenant results (layer C, plus live repeats of B1/B3/B5/B6)
 
-Run: 2026-10-22 23:08 UTC  
+Run: 2026-10-23 00:18 UTC  
 Tenant: 62130626… (modhaailabs.onmicrosoft.com, Microsoft 365 Business Premium trial: Entra ID P1 + Intune)  
 App: e3b405e7… entra-mcp-readonly, client credentials, roles: AuditLog.Read.All, DeviceManagementManagedDevices.Read.All, Directory.Read.All, User.Read.All, UserAuthenticationMethod.Read.All  
 Path exercised: the same Engine the MCP server runs (schemas -> gate -> allowlisted GETs -> audit), without stdio.
@@ -17,7 +17,7 @@ Sanitized by the results writer: GUIDs truncated, only the fictional test users 
 | C2b | get_last_sign_in on a user without history returns an explicit status | PASS | bob.test -> status=unknown |
 | C3 | list_user_groups alice.test | PASS | groups=['Modha AI Labs', 'sg-helpdesk-test', 'sg-vpn-users'] (error=None) |
 | C4 | list_auth_methods alice.test (types only, phone masked) | PASS | types=['password', 'microsoftAuthenticator'] |
-| C5 | get_sign_in_logs alice.test days=7 | PASS | entries=11 failures=6 errorCodes=[50140, 50126, 50140, 50140, 50126, 50140] |
+| C5 | get_sign_in_logs alice.test days=7 | PASS | entries=12 failures=6 errorCodes=[50140, 50126, 50140, 50140, 50126, 50140] |
 | C5b | sign-in rows carry no IP address | PASS | checked result JSON |
 | C6 | list_devices | PENDING | endpoint 200, devices=0 (no dedicated test device enrolled yet; stays pending by design) |
 | C7 | get_device | PENDING | pending with C6 |
@@ -33,33 +33,33 @@ Tool-level wall time. Cache hits are calls answered from the 60 s target-guard c
 
 | tool | calls | cache hits | network calls | cold | p50 | p95 | max | Graph request-id (last) |
 |---|---|---|---|---|---|---|---|---|
-| get_user | 20 | 19 | 1 | 600 ms | 600 ms | 600 ms | 600 ms | 763a6ba5-3b01-440b-97ad-70f760b3f458 |
-| get_last_sign_in | 20 | 0 | 20 | 757 ms | 1104 ms | 30188 ms | 31068 ms | cdb1e1ee-ed90-4327-8f60-beac4ba5bd3b |
-| list_user_groups | 20 | 20 | 0 | pending | pending | pending | pending | a440932b-fd4d-41b0-b0db-540f8fa61b06 |
-| list_auth_methods | 20 | 0 | 20 | 324 ms | 340 ms | 511 ms | 518 ms | d86bff25-26af-46ea-84bc-07ba1f77bfeb |
-| get_sign_in_logs | 3 | 0 | 3 | 15356 ms | 15356 ms | 16601 ms | 16601 ms | 717ed20d-fe53-4432-965e-06f70c2f2939 |
-| list_devices | 20 | 0 | 20 | 289 ms | 155 ms | 289 ms | 605 ms | 2003c3ba-5745-4659-9a12-1ce62da72654 |
+| get_user | 20 | 19 | 1 | 966 ms | 966 ms | 966 ms | 966 ms | 0ad5d969-bd62-4268-a31d-81eb1980a685 |
+| get_last_sign_in | 20 | 0 | 20 | 1309 ms | 1285 ms | 2283 ms | 2349 ms | 63c25cc3-0f0b-4ffd-8707-956974705108 |
+| list_user_groups | 20 | 19 | 1 | 782 ms | 782 ms | 782 ms | 782 ms | 5338b254-5f62-45af-b245-200b014c812c |
+| list_auth_methods | 20 | 0 | 20 | 460 ms | 430 ms | 663 ms | 752 ms | 498d1068-cdcc-4483-a97a-3c082a94e756 |
+| get_sign_in_logs | 3 | 0 | 3 | 18777 ms | 18777 ms | 61353 ms | 61353 ms | a6ff1803-ed6a-40dd-9cf3-b83e039adf0c |
+| list_devices | 20 | 0 | 20 | 356 ms | 175 ms | 356 ms | 863 ms | ff75381d-8101-4d10-80bf-7edd7d3149de |
 | get_device | 0 | 0 | 0 | pending | pending | pending | pending | n/a |
 
 ## Graph request latency per endpoint template (every HTTP request this run, retries included)
 
 | template | requests | p50 | p95 | max | timeouts (30 s) | non-2xx |
 |---|---|---|---|---|---|---|
-| user_by_upn | 4 | 159 ms | 176 ms | 176 ms | 0 | 1 |
-| guard_directory_roles | 3 | 169 ms | 174 ms | 174 ms | 0 | 0 |
-| guard_role_assignments | 3 | 126 ms | 140 ms | 140 ms | 0 | 0 |
-| user_member_of | 3 | 202 ms | 257 ms | 257 ms | 0 | 0 |
-| user_sign_in_activity | 23 | 348 ms | 714 ms | 956 ms | 0 | 3 |
-| users_sign_in_activity_list | 20 | 567 ms | 990 ms | 1118 ms | 0 | 0 |
-| user_auth_methods | 20 | 338 ms | 509 ms | 516 ms | 0 | 0 |
-| sign_in_logs | 3 | 15355 ms | 16599 ms | 16599 ms | 0 | 0 |
-| managed_devices | 20 | 153 ms | 288 ms | 603 ms | 0 | 0 |
+| user_by_upn | 5 | 150 ms | 369 ms | 369 ms | 0 | 1 |
+| guard_directory_roles | 4 | 229 ms | 306 ms | 306 ms | 0 | 0 |
+| guard_role_assignments | 4 | 189 ms | 200 ms | 200 ms | 0 | 0 |
+| user_member_of | 4 | 183 ms | 239 ms | 239 ms | 0 | 0 |
+| user_sign_in_activity | 22 | 601 ms | 1673 ms | 1674 ms | 0 | 1 |
+| users_sign_in_activity_list | 21 | 611 ms | 1035 ms | 1767 ms | 0 | 0 |
+| user_auth_methods | 20 | 428 ms | 662 ms | 751 ms | 0 | 0 |
+| sign_in_logs | 4 | 24452 ms | 30215 ms | 30215 ms | 2 | 0 |
+| managed_devices | 20 | 173 ms | 354 ms | 861 ms | 0 | 0 |
 
 ## Audit log sample (placeholders)
 
 ```
-{"ts": "2026-10-22T23:06:22.898+00:00", "tool": "get_user", "args": {"upn": "<upn>"}, "target": "<upn>", "decision": "allowed", "graph_status": 200, "graph_calls": 4, "latency_ms": 599, "request_id": "763a6ba5-3b01-440b-97ad-70f760b3f458", "error": null}
-{"ts": "2026-10-22T23:06:22.900+00:00", "tool": "get_user", "args": {"upn": "<upn>"}, "target": "<upn>", "decision": "allowed", "graph_status": 200, "graph_calls": 0, "latency_ms": 0, "request_id": "763a6ba5-3b01-440b-97ad-70f760b3f458", "error": null}
-{"ts": "2026-10-22T23:06:22.900+00:00", "tool": "get_user", "args": {"upn": "<upn>"}, "target": "<upn>", "decision": "allowed", "graph_status": 200, "graph_calls": 0, "latency_ms": 0, "request_id": "763a6ba5-3b01-440b-97ad-70f760b3f458", "error": null}
+{"ts": "2026-10-23T00:16:00.489+00:00", "tool": "get_user", "action": null, "target": "<upn>", "actor": null, "args": {"upn": "<upn>"}, "decision": "allowed", "graph_status": 200, "graph_calls": 4, "latency_ms": 964, "request_id": "0ad5d969-bd62-4268-a31d-81eb1980a685", "error": null}
+{"ts": "2026-10-23T00:16:00.491+00:00", "tool": "get_user", "action": null, "target": "<upn>", "actor": null, "args": {"upn": "<upn>"}, "decision": "allowed", "graph_status": null, "graph_calls": 0, "latency_ms": 0, "request_id": null, "error": null}
+{"ts": "2026-10-23T00:16:00.491+00:00", "tool": "get_user", "action": null, "target": "<upn>", "actor": null, "args": {"upn": "<upn>"}, "decision": "allowed", "graph_status": null, "graph_calls": 0, "latency_ms": 0, "request_id": null, "error": null}
 ```
 
