@@ -206,7 +206,7 @@ def test_a6_timeout_is_retried_then_surfaced_without_crashing(engine):
     engine.graph._send = dead
     with pytest.raises(ToolError) as ei:
         engine.run("get_device", {"device_id": DEVICE_ID})
-    assert ei.value.code == "graph_0" and "timeout" in str(ei.value).lower()
+    assert ei.value.code == "unavailable" and "timeout" in str(ei.value).lower()
     assert len(calls) == 1 + engine.cfg.max_retries
     assert engine.audit.read_all()[-1]["decision"] == "error"
 

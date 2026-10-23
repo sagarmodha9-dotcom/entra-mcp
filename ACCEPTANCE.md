@@ -10,7 +10,7 @@ Status vocabulary, used exactly:
 | **pending** | code is in place; its live row waits on a precondition that has not happened yet |
 | **blocked** | cannot progress until something outside the code changes |
 
-Mocked suite: **97 passed** (`tests/unit_results.md`). Live runs: milestone 1 (`live_m1.py`), milestones 2–4 (`live_m23.py`),
+Mocked suite: **109 passed** (`tests/unit_results.md`). Live runs: milestone 1 (`live_m1.py`), milestones 2–4 (`live_m23.py`),
 Claude Desktop recorder (`record_c10.py`). Dates are in the result files. No live identity write was performed to fill this
 matrix; every live row below cites a run that already happened.
 
@@ -31,7 +31,9 @@ matrix; every live row below cites a run that already happened.
 |---|---|---|---|
 | Write client sends each write exactly once (`max_retries=0`), no retry on timeout, 429 or 5xx | `graph.WriteGraphClient` | W12: 503 → one request; timeout → one request, `uncertain` | not exercised live (no failures occurred in the recorded runes except the 400 above, which was not retried) |
 | Read client still retries 429/503/timeouts with backoff (idempotent GETs) | `graph.GraphClient` | A6 ×3 | C-layer runs recovered from 30 s stalls on `get_last_sign_in` by retry |
-| Sign-in log query has its own budget: 20 s per attempt, one retry, then `status: unavailable` with a reason (never a crash, never a 60 s+ wait) | `GraphClient.BUDGETS["sign_in_logs"]` | A6 budget test (two attempts at 20 s, clear answer) | the 61 s outlier (`get_sign_in_logs`, next-day run) is what this closes; not yet observed live under the new budget |
+| Sign-in log query has its own budget: 20 s per attempt, one retry, then `status: unavailable` with a reason (never a crash, never a 60 s+ wait) | `GraphClient.BUDGETS["sign_in_logs"]` | A6 budget test (two attempts at 20 s, clear answer) | measured under the budget (two runs, 2026-10-23 00:4x UTC): 17.4 / 12.8 / 10.7 s and 17.4 / **41.3** / 17.1 s. The 41 s call = one 20 s stall + successful retry: the budget behaved as designed and the 61 s case is gone, but the endpoint's own 10–19 s cost means the **"under 20 s" target is not met for this tool and cannot be from the client side** |
+| Hard per-tool wall-clock deadline (`limits.tool_deadline_seconds`, 40 s) covering every Graph request and retry of one call; per-request timeout lowered 30 → 10 s (measured p50 ~1 s, max ~2.5 s); guard lookups that time out fail **closed** (refused), data reads that time out return explicit `unavailable` | `GraphClient.start_deadline/_remaining`, `Engine.run`, `guard.py` | Layer T (11 tests, fake clock + slow transport): no request timeout outlives the deadline, retry loops capped, every read tool bounded when Graph never answers, slow-but-answering endpoints still succeed | **measured once live** (2026-10-23 01:09 UTC): C-LAT PASS, slowest call 31.2 s < 40 s cap. But two `get_last_sign_in` calls still took ~31.2 s **with the 10 s socket timeout confirmed active**, so the stall is not inside the HTTP read: 31.2 = 30.0 + a normal 1.2 s call, and the 30 s constant `requests.timeout` does not cover is name resolution (`getaddrinfo` blocks outside the socket timeout). See next row |
+| Transport is wall-clock bounded: the HTTP call runs in a worker thread and is abandoned after `timeout` + 0.5 s whatever it is stuck on (DNS, TLS, socket); one pooled `requests.Session` keeps connections alive so far fewer lookups happen at all. For writes the existing semantics hold: an abandoned write is `uncertain`, never retried | `graph.requests_transport`, `_session()` | T7: a Session that ignores its timeout and sleeps 4× longer is abandoned at the bound | **not yet measured live**; the next read-only `live_m1.py` run is the test (expect no `get_last_sign_in` call above ~11 s) |
 
 ## 3. Sanitized output and credential rotation
 
@@ -44,6 +46,7 @@ matrix; every live row below cites a run that already happened.
 | Carol.Test temporary passwords (2) and TAP (1) exposed via pasted output | **invalidated, verified read-only** (`verify_cleanup.py`, commit `b12f175`): X1 PASS: portal password reset at 2026-10-23T00:32:34Z, after the last tool-issued reset at 23:54:50Z, so both pasted passwords are dead; X2 PASS: TAP method deleted in the portal at ~00:40 UTC and a fresh `list_auth_methods` read returns `['password']`; X3 PASS: rotated read secret present in Keychain (length 40). Accurate timeline: the TAP was created 23:55 UTC with a 60-minute lifetime and was still **usable** (expiry 00:55 UTC) when it was deleted; an earlier note in this file calling it expired was wrong by an hour. Two intermediate commits (`c8b1239`, `12eab06`) carry messages claiming X1–X3 PASS while their content shows FAIL rows; history is not rewritten, this row is the correction | test account, no licence, no data |
 | Operator refresh token on disk | implemented: MSAL cache, mode 0600, outside the repo; `entra-mcp logout` deletes it | README trust boundary |
 | Repo pre-commit secret scan | clean: the only `8Q~`/`eyJ` matches are the redaction regexes and test fixtures | `grep` run before the first commit |
+| gitleaks 8.30.1 (independent scanner) | 9 commits, 1 finding: rule `jwt`, `tests/test_b_authorization.py:144`, first seen in `08d4e3e`. **Verified synthetic**: decodes to header `{"alg":"RS256","typ":"JWT"}`, payload `{"aud":"https://graph.microsoft.com"}`, signature segment = the ASCII word "signature"; no issuer/tenant/subject/expiry/key material; it exists so B6 can prove JWT shapes are redacted. Exception: `.gitleaks.toml` allowlists that exact literal only (no path exemption: gitleaks applies path allowlists as whole-file skips, which the first draft of the config did and the negative control caught). Rerun with the config: **no leaks found, exit 0**; negative control (a different JWT literal planted in the same file on a scratch branch): **1 leak, caught** | this table; `scripts/scan_history.sh` step 4 now runs gitleaks with the config |
 | Published git history scan (every commit, every blob, not just HEAD) | `scripts/scan_history.sh`: `git grep` over every commit with path exclusions, exposed values, secret shapes, never-tracked files, pattern self-test, optional gitleaks | run on a fresh clone of `origin/main` at `c8b1239` (6 commits): sections 1–3 all 0 hits / none, **exit 0**. Negative control: a scratch commit with a planted fake secret made the scanner exit 1; after removing it, exit 0 again. The first version of the scanner (commit `7aa4642`) grepped `git log -p` and matched its own pattern lines; it was replaced before any CLEAN result was recorded |
 | Commit `c8b1239` is mislabeled | its message says "X1-X3, history scan clean" but its content is the X1/X2 **FAIL** rows from the 00:30 UTC run (portal cleanup had not happened yet and the scan never ran because the `&&` chain stopped). The next commit carries the real result; history is not rewritten | this table |
 
@@ -65,13 +68,26 @@ matrix; every live row below cites a run that already happened.
 | M4-1 `sync_device`, M4-2 `reboot_device` | **blocked**: same device precondition, plus the device id must be listed in `config.toml` | |
 | Layer D (model prompt-injection measurements D1–D5) | **not started**: needs seeded hostile strings in test-user fields and ten repetitions each; reported as counts, separately from server guarantees | after device work, or independently |
 
-## 6. Sanitized GitHub release checklist
+## 6. Portfolio demo (simulated)
+
+| item | status |
+|---|---|
+| `demo/run_demo.py` runs the real engine over the fake transport on a fictional tenant and writes `demo/transcript.json`; 12 steps incl. a denied admin write, the AI's own approve refused, a labelled simulated human approval, execution, replay refused, audit trail; built-in leak scan of the run's audit + approval files | implemented, run clean |
+| `demo/record.py` builds self-contained `demo/demo.html` and records it with Playwright → `docs/demo.mp4` (1280×720, h264, 2:01, 3038 frames, ~1.4 MB) and `docs/demo.gif` (960×540, 972 frames, ~7.5 MB) | reproduced four times; **clean-environment run**: fresh copy of the tracked files, new virtualenv, `pip install -e ".[test,demo]"`: 109 tests, identical 12-step transcript, playable video; both files decode end-to-end with ffmpeg; a 12-frame contact sheet (one per step) inspected: every frame carries the SIMULATED badge, steps 1–12 in order, no real identifier |
+| gitleaks config cannot conceal real secrets | the exception is two exact literals (the synthetic JWT and the string that spells `fakeSecretValue_ForTestOnly`), no path or rule exemption. Added rule `entra-client-secret` because gitleaks' defaults have no pattern for Entra client secrets. Controls on a scratch branch: a planted Entra secret in `src/`, a planted JWT in `src/`, and a planted Entra secret in the fixture file itself → all three reported (exit 1); real history → no leaks (exit 0) |
+| Labelled SIMULATED in the header of every frame, in the first and last step, in the README | yes |
+| Shows nothing untested: device actions appear only as "not demonstrated, pending" | yes |
+| No real tenant identifiers: tenant id all zeros, domain `contoso-demo.onmicrosoft.com`, users `alice.demo`/`carol.demo`, operator `ops.operator` | yes |
+
+## 7. Sanitized GitHub release checklist
 
 - [x] `.gitignore` excludes `.venv/`, `audit/*.jsonl`, `audit/*.json`, `tests/tenant.json`, `.env`
 - [x] Token cache lives outside the repo (`~/Library/Application Support/entra-mcp/`)
 - [x] Client secret only in the macOS Keychain; `config.toml` holds tenant id, client ids and domain (public-safe identifiers)
+- [x] Update zips audited: none contained `audit/`, a token cache, `tenant.json` or `.env`; one (`entra-mcp-demo-hardening.zip`) contained `config.toml` and blanked the writes `client_id` on the Mac (no secret involved, the loader refuses secret-like keys); restored by `sed`, and later zips exclude the file
 - [x] Pre-commit grep for `8Q~` / `eyJ` shows only the redaction regexes and fixtures
 - [x] `scripts/scan_history.sh` reports CLEAN (exit 0) over the pushed history at `c8b1239`, negative control exits 1
+- [x] gitleaks over the full history with the one documented exception: no leaks found
 - [ ] GitHub secret scanning + push protection enabled (Settings → Code security)
 - [x] Result files name only the fictional test users; admin UPNs masked; GUIDs truncated; no IPs; no response bodies
 - [x] README states the trust boundary and known risks

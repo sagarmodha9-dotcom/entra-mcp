@@ -1,0 +1,9 @@
+{
+ "mp4": "docs/demo.mp4",
+ "mp4_bytes": 1394745,
+ "gif": "docs/demo.gif",
+ "gif_bytes": 7263691,
+ "duration_s": 121.0,
+ "resolution": "1280x720",
+ "simulated": true
+}

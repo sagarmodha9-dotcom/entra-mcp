@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>entra-mcp demo</title>
+<style>
+  :root { --bg:#0e1116; --panel:#151a22; --line:#2a3240; --fg:#e6e9ef; --dim:#8b95a7; --ai:#5aa9ff; --human:#ffb454;
+          --sys:#9aa5b8; --ok:#4cd080; --bad:#ff6b6b; --mono:"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif; }
+  #stage { width:1280px; height:720px; position:relative; overflow:hidden; display:grid; grid-template-rows:56px 1fr 74px; }
+  header { display:flex; align-items:center; gap:14px; padding:0 22px; border-bottom:1px solid var(--line); background:#10141b; }
+  header .name { font-weight:650; letter-spacing:.2px; }
+  header .tag { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--dim); }
+  header .sim { border-color:#7a4b00; color:#ffb454; background:#2a1d08; font-weight:600; }
+  header .right { margin-left:auto; color:var(--dim); font-size:13px; }
+  main { display:grid; grid-template-columns:420px minmax(0,1fr); min-height:0; }
+  #left { border-right:1px solid var(--line); padding:18px 20px; display:flex; flex-direction:column; gap:12px; background:var(--panel); }
+  #phase { font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--dim); }
+  #title { font-size:24px; font-weight:650; line-height:1.2; }
+  #caption { color:#c6cdd9; font-size:15.5px; }
+  #actor { display:inline-flex; align-items:center; gap:8px; font-size:13px; padding:5px 10px; border-radius:6px; width:max-content; }
+  #actor.ai { background:#0f2740; color:var(--ai); } #actor.human { background:#3a2708; color:var(--human); } #actor.system { background:#1c222c; color:var(--sys); }
+  #steps { margin-top:auto; display:flex; gap:5px; }
+  #steps i { flex:1; height:5px; border-radius:3px; background:#232a36; } #steps i.done { background:var(--ai); } #steps i.now { background:#fff; }
+  #right { padding:18px 22px; min-height:0; min-width:0; display:flex; flex-direction:column; gap:12px; }
+  .term { background:#0a0d12; border:1px solid var(--line); border-radius:8px; padding:14px 16px; font-family:var(--mono); font-size:13.5px; line-height:1.5; white-space:pre-wrap; word-break:break-word; overflow:hidden; }
+  .term.req { color:#d7dde8; } .term.res { flex:1; color:#c8d0dc; }
+  .k { color:#7fb3ff; } .s { color:#b7e3a1; } .n { color:#f3c26b; } .b { color:#e6a1ff; } .c { color:var(--dim); }
+  .prompt { color:var(--ok); } .err { color:var(--bad); } .hum { color:var(--human); }
+  .verdict { display:flex; gap:10px; align-items:center; font-size:14px; }
+  .pill { padding:4px 10px; border-radius:6px; font-weight:600; font-family:var(--mono); font-size:12.5px; }
+  .pill.ok { background:#10301d; color:var(--ok); } .pill.bad { background:#3a1414; color:var(--bad); } .pill.info { background:#1c222c; color:var(--dim); }
+  footer { border-top:1px solid var(--line); padding:12px 22px; display:flex; align-items:center; gap:18px; color:var(--dim); font-size:13px; background:#10141b; }
+  footer .big { color:var(--fg); font-size:15px; }
+  .audit { border-collapse:collapse; table-layout:auto; max-width:100%; }
+  .audit td { padding:3px 10px 3px 0; font-family:var(--mono); font-size:11.5px; vertical-align:top; white-space:nowrap; }
+  .audit th { text-align:left; color:var(--dim); font-weight:500; padding:0 10px 6px 0; font-size:11.5px; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <span class="name">entra-mcp</span>
+    <span class="tag">approval-gated MCP server · Entra ID + Intune</span>
+    <span class="tag sim">SIMULATED · fake Graph transport · fictional tenant</span>
+    <span class="right" id="clock"></span>
+  </header>
+  <main>
+    <section id="left">
+      <div id="phase"></div>
+      <div id="title"></div>
+      <div id="actor"></div>
+      <div id="caption"></div>
+      <div id="steps"></div>
+    </section>
+    <section id="right">
+      <div class="term req" id="req"></div>
+      <div class="term res" id="res"></div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+  </main>
+  <footer>
+    <span class="big" id="foot"></span>
+    <span style="margin-left:auto">github.com/sagarmodha9-dotcom/entra-mcp</span>
+  </footer>
+</div>
+<script id="transcript" type="application/json">{
+ "generated_by": "demo/run_demo.py",
+ "simulated": true,
+ "domain": "contoso-demo.onmicrosoft.com",
+ "tenant_id": "00000000-0000-0000-0000-000000000000",
+ "steps": [
+  {
+   "phase": "intro",
+   "actor": "system",
+   "title": "SIMULATED demonstration",
+   "caption": "Real server code, fake Microsoft Graph transport. Tenant 0000\u2026, domain contoso-demo.onmicrosoft.com, fictional users. No network, no credentials, no live Microsoft operation.",
+   "tool": null,
+   "args": null,
+   "result": null,
+   "error": null,
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "read",
+   "actor": "ai",
+   "title": "MCP read: get_user",
+   "caption": "The model asks a read-only question. Fixed Graph template, fixed field allowlist, admin targets refused before any call.",
+   "tool": "get_user",
+   "args": {
+    "upn": "alice.demo@contoso-demo.onmicrosoft.com"
+   },
+   "result": {
+    "userPrincipalName": "alice.demo@contoso-demo.onmicrosoft.com",
+    "displayName": "Alice Demo",
+    "accountEnabled": true,
+    "jobTitle": "Analyst",
+    "department": "Finance",
+    "createdDateTime": "2026-01-15T09:00:00Z",
+    "lastPasswordChangeDateTime": "2026-09-01T12:00:00Z",
+    "cloudOnly": true,
+    "usageLocation": "US",
+    "note": "Microsoft Graph exposes no lockout flag; smart lockout clears itself (60 s, growing) and is not readable or clearable by API. Use get_sign_in_logs to see failed sign-ins."
+   },
+   "error": null,
+   "graph_requests": [
+    "GET /users/alice.demo%40contoso-demo.onmicrosoft.com?$select=id,userPrincipalName,displayName,accountEnabled,jobTitle,department,createdDateTime,lastPasswordChangeDateTime,onPremisesSyncEnabled,usageLocation",
+    "GET /users/a1a1a1a1-0000-4000-8000-000000000001/transitiveMemberOf/microsoft.graph.directoryRole?$select=id,displayName",
+    "GET /roleManagement/directory/roleAssignments?$filter=principalId%20eq%20%27a1a1a1a1-0000-4000-8000-000000000001%27&$select=id,roleDefinitionId",
+    "GET /users/a1a1a1a1-0000-4000-8000-000000000001/memberOf?$select=id,displayName,securityEnabled,isAssignableToRole,groupTypes,roleTemplateId&$top=50"
+   ],
+   "human_command": null
+  },
+  {
+   "phase": "read",
+   "actor": "ai",
+   "title": "MCP read: get_last_sign_in",
+   "caption": "signInActivity is returned with its documented 24 h lag noted; when Graph has nothing, the tool says 'unknown', never 'never signed in'.",
+   "tool": "get_last_sign_in",
+   "args": {
+    "upn": "alice.demo@contoso-demo.onmicrosoft.com"
+   },
+   "result": {
+    "userPrincipalName": "alice.demo@contoso-demo.onmicrosoft.com",
+    "status": "known",
+    "lastSignInDateTime": "2026-10-21T14:12:09Z",
+    "lastNonInteractiveSignInDateTime": "2026-10-22T08:01:44Z",
+    "lastSuccessfulSignInDateTime": null
+   },
+   "error": null,
+   "graph_requests": [
+    "GET /users/a1a1a1a1-0000-4000-8000-000000000001?$select=id,signInActivity"
+   ],
+   "human_command": null
+  },
+  {
+   "phase": "validate",
+   "actor": "ai",
+   "title": "Input validation",
+   "caption": "Hostile or malformed arguments are rejected by the strict schema (UPN regex + tenant domain, extra fields forbidden). Zero Graph calls.",
+   "tool": "get_user",
+   "args": {
+    "upn": "alice.demo@contoso-demo.onmicrosoft.com' OR 1=1 --",
+    "extra": "field"
+   },
+   "result": null,
+   "error": {
+    "code": "invalid_arguments",
+    "message": "upn: Value error, userPrincipalName must look like name@domain with letters, digits, '.', '_' or '-' only; extra: Extra inputs are not permitted"
+   },
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "deny",
+   "actor": "ai",
+   "title": "DENIED: write against an admin",
+   "caption": "disable_account on a deny-listed admin is refused at proposal time by the target guard. No proposal is created. Zero Graph calls.",
+   "tool": "disable_account",
+   "args": {
+    "upn": "it.admin@contoso-demo.onmicrosoft.com",
+    "reason": "INC0099 test"
+   },
+   "result": null,
+   "error": {
+    "code": "protected",
+    "message": "this account is protected by the server's deny list; no tool may target it"
+   },
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "propose",
+   "actor": "ai",
+   "title": "Write tool = proposal only",
+   "caption": "revoke_sessions does not touch Graph. It records a proposal with a SHA-256 digest over (tool, args, target, graph call) and a 10-minute expiry.",
+   "tool": "revoke_sessions",
+   "args": {
+    "upn": "carol.demo@contoso-demo.onmicrosoft.com",
+    "reason": "INC0042 lost laptop, revoke all sessions"
+   },
+   "result": {
+    "status": "proposed",
+    "approval_id": "apr_8b7d1c96999a8587",
+    "tool": "revoke_sessions",
+    "target": "carol.demo@contoso-demo.onmicrosoft.com",
+    "would_do": "revoke all sessions/refresh tokens for carol.demo@contoso-demo.onmicrosoft.com",
+    "graph_call": "POST /users/{id}/revokeSignInSessions",
+    "expires_at": "2026-10-23T14:10:14+00:00",
+    "next_step": "A human must approve in Terminal: entra-mcp approve apr_8b7d1c96999a8587  (then call approve with this id). Nothing has changed yet."
+   },
+   "error": null,
+   "graph_requests": [
+    "GET /users/carol.demo%40contoso-demo.onmicrosoft.com?$select=id,userPrincipalName,displayName,accountEnabled,jobTitle,department,createdDateTime,lastPasswordChangeDateTime,onPremisesSyncEnabled,usageLocation",
+    "GET /users/c3c3c3c3-0000-4000-8000-000000000003/transitiveMemberOf/microsoft.graph.directoryRole?$select=id,displayName",
+    "GET /roleManagement/directory/roleAssignments?$filter=principalId%20eq%20%27c3c3c3c3-0000-4000-8000-000000000003%27&$select=id,roleDefinitionId",
+    "GET /users/c3c3c3c3-0000-4000-8000-000000000003/memberOf?$select=id,displayName,securityEnabled,isAssignableToRole,groupTypes,roleTemplateId&$top=50"
+   ],
+   "human_command": null
+  },
+  {
+   "phase": "boundary",
+   "actor": "ai",
+   "title": "The AI cannot approve its own proposal",
+   "caption": "Calling the approve tool on a pending proposal is refused: status is 'pending', not 'approved'. Only the Terminal CLI can change that.",
+   "tool": "approve",
+   "args": {
+    "approval_id": "apr_8b7d1c96999a8587"
+   },
+   "result": null,
+   "error": {
+    "code": "not_approved",
+    "message": "proposal apr_8b7d1c96999a8587 is not approved by a human yet. A person must run in Terminal: entra-mcp approve apr_8b7d1c96999a8587"
+   },
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "human",
+   "actor": "human",
+   "title": "HUMAN approval in Terminal (simulated)",
+   "caption": "A person reviews the proposal and runs the CLI. This is the only code path that moves a proposal to 'approved'. The MCP server never calls it.",
+   "tool": null,
+   "args": null,
+   "result": {
+    "approval_id": "apr_8b7d1c96999a8587",
+    "status": "approved",
+    "approved_by": "cli:jordan (Terminal)",
+    "summary": "revoke all sessions/refresh tokens for carol.demo@contoso-demo.onmicrosoft.com",
+    "graph_call": "POST /users/{id}/revokeSignInSessions"
+   },
+   "error": null,
+   "graph_requests": [],
+   "human_command": "entra-mcp approve apr_8b7d1c96999a8587"
+  },
+  {
+   "phase": "execute",
+   "actor": "ai",
+   "title": "Approved execution",
+   "caption": "Now the approve tool claims the proposal (digest re-verified), sends exactly one write with the operator's delegated token, and records the outcome. No automatic retry.",
+   "tool": "approve",
+   "args": {
+    "approval_id": "apr_8b7d1c96999a8587"
+   },
+   "result": {
+    "status": "executed",
+    "approval_id": "apr_8b7d1c96999a8587",
+    "tool": "revoke_sessions",
+    "target": "carol.demo@contoso-demo.onmicrosoft.com",
+    "executed_as": "ops.operator@contoso-demo.onmicrosoft.com",
+    "graph_status": 200,
+    "request_id": "fake-req",
+    "revoked": true,
+    "result_summary": "revokeSignInSessions -> value=True",
+    "note": "takes effect within minutes; already-issued access tokens live until expiry"
+   },
+   "error": null,
+   "graph_requests": [
+    "GET /users/carol.demo%40contoso-demo.onmicrosoft.com?$select=id,userPrincipalName,displayName,accountEnabled,jobTitle,department,createdDateTime,lastPasswordChangeDateTime,onPremisesSyncEnabled,usageLocation",
+    "GET /users/c3c3c3c3-0000-4000-8000-000000000003/transitiveMemberOf/microsoft.graph.directoryRole?$select=id,displayName",
+    "GET /roleManagement/directory/roleAssignments?$filter=principalId%20eq%20%27c3c3c3c3-0000-4000-8000-000000000003%27&$select=id,roleDefinitionId",
+    "GET /users/c3c3c3c3-0000-4000-8000-000000000003/memberOf?$select=id,displayName,securityEnabled,isAssignableToRole,groupTypes,roleTemplateId&$top=50",
+    "POST /users/c3c3c3c3-0000-4000-8000-000000000003/revokeSignInSessions"
+   ],
+   "human_command": null
+  },
+  {
+   "phase": "replay",
+   "actor": "ai",
+   "title": "Replay refused",
+   "caption": "The same approval id a second time: the proposal is already 'executed'. Single use, enforced by the store under a file lock.",
+   "tool": "approve",
+   "args": {
+    "approval_id": "apr_8b7d1c96999a8587"
+   },
+   "result": null,
+   "error": {
+    "code": "not_executable",
+    "message": "proposal apr_8b7d1c96999a8587 is executed; proposals are single use"
+   },
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "audit",
+   "actor": "system",
+   "title": "Audit trail (redacted JSONL)",
+   "caption": "Every call, allowed or refused, is one line: tool, action, target, actor, decision, Graph status, request id. Tokens and secrets never appear (scan of this run's audit + approval files: clean).",
+   "tool": null,
+   "args": null,
+   "result": [
+    {
+     "ts": "2026-10-23T01:16:00.759+00:00",
+     "tool": "get_user",
+     "target": "alice.demo@contoso-demo.onmicrosoft.com",
+     "decision": "allowed",
+     "graph_status": 200,
+     "graph_calls": 4,
+     "request_id": "fake-req"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.761+00:00",
+     "tool": "get_last_sign_in",
+     "target": "alice.demo@contoso-demo.onmicrosoft.com",
+     "decision": "allowed",
+     "graph_status": 200,
+     "graph_calls": 1,
+     "request_id": "fake-req"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.762+00:00",
+     "tool": "get_user",
+     "decision": "invalid",
+     "graph_calls": 0,
+     "error": "invalid_arguments: upn: Value error, userPrincipalName must look like name@domain with letters, digits, '.', '_' or '-' only; extra: Extra inputs are not permitted"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.762+00:00",
+     "tool": "disable_account",
+     "action": "disable_account",
+     "target": "it.admin@contoso-demo.onmicrosoft.com",
+     "decision": "refused",
+     "graph_calls": 0,
+     "error": "protected: this account is protected by the server's deny list; no tool may target it"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.763+00:00",
+     "tool": "revoke_sessions",
+     "action": "revoke_sessions",
+     "target": "carol.demo@contoso-demo.onmicrosoft.com",
+     "decision": "proposed",
+     "graph_status": 200,
+     "graph_calls": 4,
+     "request_id": "fake-req"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.764+00:00",
+     "tool": "approve",
+     "target": "apr_8b7d1c96999a8587",
+     "decision": "refused",
+     "graph_calls": 0,
+     "error": "not_approved: proposal apr_8b7d1c96999a8587 is not approved by a human yet. A person must run in Terminal: entra-mcp approve apr_8b7d1c96999a8587"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.766+00:00",
+     "tool": "approve",
+     "action": "revoke_sessions",
+     "target": "revoke_sessions -> carol.demo@contoso-demo.onmicrosoft.com",
+     "actor": "ops.operator@contoso-demo.onmicrosoft.com",
+     "decision": "executed",
+     "graph_status": 200,
+     "graph_calls": 4,
+     "request_id": "fake-req"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.767+00:00",
+     "tool": "approve",
+     "target": "apr_8b7d1c96999a8587",
+     "decision": "refused",
+     "graph_calls": 0,
+     "error": "not_executable: proposal apr_8b7d1c96999a8587 is executed; proposals are single use"
+    }
+   ],
+   "error": null,
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "outro",
+   "actor": "system",
+   "title": "Not demonstrated: Intune device actions",
+   "caption": "sync_device and reboot_device are implemented and mock-tested, gated on a config allowlist of device ids, and still PENDING a disposable enrolled device. Nothing in this demo was a live Microsoft Graph result.",
+   "tool": null,
+   "args": null,
+   "result": null,
+   "error": null,
+   "graph_requests": [],
+   "human_command": null
+  }
+ ]
+}</script>
+<script>
+const T = JSON.parse(document.getElementById('transcript').textContent);
+const steps = T.steps;
+const params = new URLSearchParams(location.search);
+const SPEED = parseFloat(params.get('speed') || '1');          // >1 = faster
+const q = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function hl(obj){ // syntax-highlighted JSON
+  const j = JSON.stringify(obj, null, 2);
+  return q(j).replace(/("(?:[^"\\]|\\.)*")(\s*:)?/g, (m,a,b)=> b ? `<span class="k">${a}</span>${b}` : `<span class="s">${a}</span>`)
+             .replace(/\b(true|false|null)\b/g,'<span class="b">$1</span>')
+             .replace(/\b(-?\d+(?:\.\d+)?)\b(?![^<]*<\/span>)/g,'<span class="n">$1</span>');
+}
+const PHASE = {intro:'Framing', read:'1 · Read-only tools', validate:'2 · Input validation', deny:'3 · Safety control',
+               propose:'4 · Proposal', boundary:'5 · Human-approval boundary', human:'5 · Human-approval boundary',
+               execute:'6 · Approved execution', replay:'7 · Replay prevention', audit:'8 · Audit trail', outro:'Scope'};
+const FOOT = {intro:'Nothing here reaches Microsoft. The transport is an in-repo HTTP mock; the server code is the real thing.',
+              read:'Reads use an app-only token with five *.Read.All permissions. 21 fixed URL templates; no other URL can be built.',
+              validate:'pydantic strict + extra=forbid: rejected arguments make zero Graph calls and are still audited.',
+              deny:'Deny list → directory roles → role assignments → role-assignable groups. Fail closed.',
+              propose:'A write tool never writes. It records what WOULD run and hands the decision to a person.',
+              boundary:'The model can propose and execute, never approve. Approval exists only in the Terminal CLI.',
+              human:'A human ran the CLI. The transcript labels this step as the human\'s action; the AI did not approve itself.',
+              execute:'One request, sent once, with the operator\'s delegated token. Timeout → "uncertain", never a blind retry.',
+              replay:'pending → approved → executed is one-way. Expired, denied, tampered and executed proposals cannot run.',
+              audit:'Who asked, what action, which target, which operator, what Graph said, which request id. No credentials.',
+              outro:'Device actions stay pending until a disposable device is enrolled. Nothing untested is shown as working.'};
+const DUR = {intro:7000, read:10000, validate:9000, deny:10000, propose:12000, boundary:10000, human:11000, execute:12000, replay:8000, audit:14000, outro:9000};
+const $ = id => document.getElementById(id);
+$('steps').innerHTML = steps.map(()=>'<i></i>').join('');
+const bars = [...$('steps').children];
+const sleep = ms => new Promise(r=>setTimeout(r, ms/SPEED));
+async function type(el, html, total){ // reveal html progressively (by text length) without breaking tags
+  el.innerHTML = ''; const tmp = document.createElement('div'); tmp.innerHTML = html;
+  const text = tmp.textContent; const n = text.length; const stepN = Math.max(1, Math.round(n/40));
+  for (let i=0;i<n;i+=stepN){ el.innerHTML = html; clipTo(el, i); await sleep(total/40); }
+  el.innerHTML = html;
+}
+function clipTo(el, count){ // walk text nodes and truncate after `count` characters
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let left = count; const kill=[];
+  for (let t=w.nextNode(); t; t=w.nextNode()){ if (left<=0){ kill.push(t); continue; } if (t.data.length>left){ t.data = t.data.slice(0,left); left=0; } else left -= t.data.length; }
+  kill.forEach(t=>t.data='');
+}
+function reqHtml(s){
+  if (s.human_command) return `<span class="hum">$ </span>${q(s.human_command)}\n<span class="c"># human at the keyboard (Terminal) · simulated for this demo</span>`;
+  if (!s.tool) return `<span class="c"># ${q(s.title)}</span>`;
+  return `<span class="prompt">tools/call</span> <span class="k">${q(s.tool)}</span>\n${hl(s.args)}`;
+}
+function resHtml(s){
+  if (s.phase==='audit'){
+    const rows = s.result.map(r=>`<tr><td>${q(r.ts.slice(11,19))}</td><td>${q(r.tool)}</td><td>${q(r.action||'')}</td><td>${q((r.target||'').replace(/@[^ ]+/g,''))}</td><td>${q((r.actor||'').split('@')[0])}</td><td class="${/allowed|executed|proposed/.test(r.decision)?'prompt':'err'}">${q(r.decision)}</td><td>${r.graph_status??''}</td><td>${r.graph_calls??''}</td></tr>`).join('');
+    return `<table class="audit"><tr><th>ts</th><th>tool</th><th>action</th><th>target</th><th>actor</th><th>decision</th><th>http</th><th>calls</th></tr>${rows}</table>`;
+  }
+  if (s.error) return `<span class="err">error</span> ${hl(s.error)}`;
+  if (s.result==null) return `<span class="c">${q(s.caption)}</span>`;
+  return hl(s.result);
+}
+function verdict(s){
+  const g = s.graph_requests||[]; const calls = g.length;
+  const pill = (cls, t)=>`<span class="pill ${cls}">${q(t)}</span>`;
+  if (s.phase==='validate') return pill('bad','REJECTED · invalid_arguments') + pill('ok',`${calls} Graph calls`);
+  if (s.phase==='deny') return pill('bad','REFUSED · protected target') + pill('ok',`${calls} Graph calls`);
+  if (s.phase==='propose') return pill('info','status: proposed') + pill('ok', `${g.filter(x=>!x.startsWith('GET')).length} writes sent`);
+  if (s.phase==='boundary') return pill('bad','REFUSED · not_approved') + pill('ok', `${g.filter(x=>!x.startsWith('GET')).length} writes sent`);
+  if (s.phase==='human') return pill('ok','approved_by: cli:jordan (Terminal)') + pill('info','human step');
+  if (s.phase==='execute') return pill('ok','EXECUTED · Graph 200') + pill('info', g.filter(x=>!x.startsWith('GET')).join(' '));
+  if (s.phase==='replay') return pill('bad','REFUSED · not_executable') + pill('ok','single use');
+  if (s.phase==='read') return pill('ok','allowed') + pill('info', `${calls} Graph GETs (user + guard lookups)`);
+  if (s.phase==='audit') return pill('ok','no tokens or secrets in the log');
+  return '';
+}
+async function run(){
+  for (let i=0;i<steps.length;i++){
+    const s = steps[i]; const d = DUR[s.phase]||9000;
+    bars.forEach((b,j)=>{ b.className = j<i?'done':(j===i?'now':''); });
+    $('phase').textContent = PHASE[s.phase]||s.phase; $('title').textContent = s.title;
+    $('actor').className = s.actor; $('actor').textContent = {ai:'AI · MCP client (Claude Desktop)', human:'HUMAN · Terminal', system:'SYSTEM'}[s.actor];
+    $('caption').textContent = s.caption; $('foot').textContent = FOOT[s.phase]||''; $('verdict').innerHTML='';
+    $('res').innerHTML=''; $('clock').textContent = `step ${i+1} / ${steps.length}`;
+    await type($('req'), reqHtml(s), d*0.25);
+    await sleep(d*0.1);
+    await type($('res'), resHtml(s), d*0.35);
+    $('verdict').innerHTML = verdict(s);
+    await sleep(d*0.3);
+  }
+  bars.forEach(b=>b.className='done');
+  document.body.dataset.done = '1';
+}
+run();
+</script>
+</body>
+</html>

@@ -206,6 +206,13 @@ def main() -> int:
     leak = bool(re.search(r"eyJ[A-Za-z0-9_\-]{16,}|[A-Za-z0-9]{3}8Q~", text)) or secret in text
     row("B6", "audit log holds no token or secret after the run (live)", not leak,
         f"{len(engine.audit.read_all())} audit lines scanned")
+    # ---- bounded latency, measured: the slowest single tool call of this run vs the configured deadline
+    worst = max(((t, l.get("max_ms") or 0) for t, l in LAT.items()), key=lambda x: x[1], default=("n/a", 0))
+    cap_ms = int(cfg.tool_deadline_seconds * 1000)
+    row("C-LAT", f"no tool call exceeded tool_deadline_seconds={cfg.tool_deadline_seconds:g} s (measured)",
+        worst[1] <= cap_ms + 500,
+        f"slowest call this run: {worst[0]} {worst[1]} ms; per-request timeout {cfg.timeout_seconds:g} s, sign-in log "
+        f"20 s/attempt; p50 per tool: " + ", ".join(f"{t} {l.get('p50_ms')}" for t, l in LAT.items() if l.get('p50_ms')))
 
     # ---- C10 manual
     row("C10", "Claude Desktop end to end", None, "manual: ask Claude Desktop 'Is alice.test enabled and when did she "
@@ -236,7 +243,7 @@ EVIDENCE_META = {
     "list_auth_methods": ("GET /users/{id}/authentication/methods", "UserAuthenticationMethod.Read.All", "not stated by MS",
                           "none (app)", "phone masked, ids dropped"),
     "get_sign_in_logs": ("GET /auditLogs/signIns?$filter=userId eq '{id}' and createdDateTime ge …", "AuditLog.Read.All",
-                         "P1", "none (app)", "30-day retention; no IPs returned; slow endpoint, 12-16 s per call (60 s timeouts disappeared once the ConsistencyLevel header was dropped)"),
+                         "P1", "none (app)", "30-day retention; no IPs returned; slow endpoint, 10-19 s per call with occasional stalls; 20 s per-attempt budget, one retry, inside the 40 s tool deadline"),
     "list_devices": ("GET /deviceManagement/managedDevices[?$filter=userPrincipalName eq '{upn}']",
                      "DeviceManagementManagedDevices.Read.All", "Intune", "none (app)", "UPN filter unverified until a device exists"),
     "get_device": ("GET /deviceManagement/managedDevices/{id}", "DeviceManagementManagedDevices.Read.All", "Intune",
@@ -269,7 +276,7 @@ def write_results(cfg, roles, engine) -> None:
         md.append(f"| {t} | {l.get('n', 0)} | {l.get('cache_hits', 0)} | {l.get('network_calls', 0)} | {f(l.get('cold_ms'))} | "
                   f"{f(l.get('p50_ms'))} | {f(l.get('p95_ms'))} | {f(l.get('max_ms'))} | {l.get('request_id') or 'n/a'} |")
     md += ["", "## Graph request latency per endpoint template (every HTTP request this run, retries included)", "",
-           "| template | requests | p50 | p95 | max | timeouts (30 s) | non-2xx |", "|---|---|---|---|---|---|---|"]
+           "| template | requests | p50 | p95 | max | timeouts | non-2xx |", "|---|---|---|---|---|---|---|"]
     by: dict[str, list] = {}
     for tpl, ms, st in engine.graph.timings:
         by.setdefault(tpl, []).append((ms, st))

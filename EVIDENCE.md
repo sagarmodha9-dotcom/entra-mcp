@@ -1,18 +1,18 @@
 # Evidence matrix: milestone 1 (read-only)
 
 Filled only by `tests/live_m1.py` from real Graph calls. 'Supported' is never written by hand.  
-Last live run: 2026-10-23 00:18 UTC. Mocked test totals are in `tests/unit_results.md` and are not evidence of tenant behaviour.
+Last live run: 2026-10-23 01:11 UTC. Mocked test totals are in `tests/unit_results.md` and are not evidence of tenant behaviour.
 
 **Status: 4 of 7 tools live-validated, 3 pending, 0 failed.** Not all seven are validated until the device rows pass.
 
 | tool | Graph endpoint | permission (app) | licence | role needed | live result (date) | latency p50 / p95 | limitations |
 |---|---|---|---|---|---|---|---|
-| get_user | GET /users/{upn}?$select=… | User.Read.All | Free | none | supported (2026-10-23) | 966 / 966 ms | no lockout flag exists in Graph |
-| get_last_sign_in | GET /users/{id}?$select=signInActivity (+ list form cross-check) | AuditLog.Read.All + User.Read.All | P1 | none | pending (2026-10-23) | 1285 / 2283 ms | property updates up to 24 h late (documented); 204/empty -> status=unknown, never 'never signed in' |
-| list_user_groups | GET /users/{id}/memberOf | Directory.Read.All | Free | none | supported (2026-10-23) | 782 / 782 ms | direct memberships only |
-| list_auth_methods | GET /users/{id}/authentication/methods | UserAuthenticationMethod.Read.All | not stated by MS | none (app) | supported (2026-10-23) | 430 / 663 ms | phone masked, ids dropped |
-| get_sign_in_logs | GET /auditLogs/signIns?$filter=userId eq '{id}' and createdDateTime ge … | AuditLog.Read.All | P1 | none (app) | supported (2026-10-23) | 18777 / 61353 ms | 30-day retention; no IPs returned; slow endpoint, 12-16 s per call (60 s timeouts disappeared once the ConsistencyLevel header was dropped) |
-| list_devices | GET /deviceManagement/managedDevices[?$filter=userPrincipalName eq '{upn}'] | DeviceManagementManagedDevices.Read.All | Intune | none (app) | pending (2026-10-23) | 175 / 356 ms | UPN filter unverified until a device exists |
+| get_user | GET /users/{upn}?$select=… | User.Read.All | Free | none | supported (2026-10-23) | 583 / 583 ms | no lockout flag exists in Graph |
+| get_last_sign_in | GET /users/{id}?$select=signInActivity (+ list form cross-check) | AuditLog.Read.All + User.Read.All | P1 | none | pending (2026-10-23) | 1073 / 31052 ms | property updates up to 24 h late (documented); 204/empty -> status=unknown, never 'never signed in' |
+| list_user_groups | GET /users/{id}/memberOf | Directory.Read.All | Free | none | supported (2026-10-23) | pending | direct memberships only |
+| list_auth_methods | GET /users/{id}/authentication/methods | UserAuthenticationMethod.Read.All | not stated by MS | none (app) | supported (2026-10-23) | 310 / 467 ms | phone masked, ids dropped |
+| get_sign_in_logs | GET /auditLogs/signIns?$filter=userId eq '{id}' and createdDateTime ge … | AuditLog.Read.All | P1 | none (app) | supported (2026-10-23) | 8531 / 15224 ms | 30-day retention; no IPs returned; slow endpoint, 10-19 s per call with occasional stalls; 20 s per-attempt budget, one retry, inside the 40 s tool deadline |
+| list_devices | GET /deviceManagement/managedDevices[?$filter=userPrincipalName eq '{upn}'] | DeviceManagementManagedDevices.Read.All | Intune | none (app) | pending (2026-10-23) | 159 / 208 ms | UPN filter unverified until a device exists |
 | get_device | GET /deviceManagement/managedDevices/{id} | DeviceManagementManagedDevices.Read.All | Intune | none (app) | pending (2026-10-23) | pending | pending until a dedicated test device is enrolled |
 
 Pending rows are pending because their precondition is not met yet (a sign-in by the test user, an Authenticator registration, an enrolled dedicated test device), not because the code is missing. They are closed only by a later run of the same script.

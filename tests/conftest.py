@@ -148,11 +148,11 @@ def pytest_sessionfinish(session, exitstatus):
     import datetime as dt
     import platform
     out = ROOT / "tests" / "unit_results.md"
-    rows = [(n, o, d) for n, o, d in _REPORTS if "/test_a_" in n or "/test_b_" in n or "/test_w_" in n]
+    rows = [(n, o, d) for n, o, d in _REPORTS if "/test_a_" in n or "/test_b_" in n or "/test_w_" in n or "/test_t_" in n]
     if not rows:
         return
     passed = sum(1 for _, o, _ in rows if o == "passed")
-    md = ["# Layers A, B and W: protocol, server-authorization and write-path tests (MOCKED Graph, no tenant)", "",
+    md = ["# Layers A, B, W and T: protocol, server-authorization, write-path and bounded-latency tests (MOCKED Graph, no tenant)", "",
           "These tests never contact Microsoft. Graph is an HTTP mock that records every request and fails the "
           "suite on anything but GET. They prove what the SERVER does; they prove nothing about the tenant. "
           "Live tenant evidence is in `tests/live_results.md` and `EVIDENCE.md`, produced by `tests/live_m1.py`.", "",
@@ -160,6 +160,7 @@ def pytest_sessionfinish(session, exitstatus):
           f"Result: **{passed} passed, {len(rows) - passed} failed, {len(rows)} tests**", "",
           "| layer | test | result |", "|---|---|---|"]
     for n, o, _ in rows:
-        layer = "A protocol" if "test_a_" in n else ("B server authorization" if "test_b_" in n else "W write path (approvals)")
+        layer = ("A protocol" if "test_a_" in n else "B server authorization" if "test_b_" in n else
+                 "T bounded latency (fake clock)" if "test_t_" in n else "W write path (approvals)")
         md.append(f"| {layer} | `{n.split('::', 1)[1]}` | {o} |")
     out.write_text("\n".join(md) + "\n")

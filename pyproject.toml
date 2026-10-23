@@ -12,6 +12,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8", "pytest-asyncio>=0.23"]
+demo = ["playwright>=1.50"]        # demo/record.py; then `python -m playwright install chromium` once
 
 [project.scripts]
 entra-mcp = "entra_mcp.server:main"

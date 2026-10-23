@@ -1,0 +1,316 @@
+{
+ "generated_by": "demo/run_demo.py",
+ "simulated": true,
+ "domain": "contoso-demo.onmicrosoft.com",
+ "tenant_id": "00000000-0000-0000-0000-000000000000",
+ "steps": [
+  {
+   "phase": "intro",
+   "actor": "system",
+   "title": "SIMULATED demonstration",
+   "caption": "Real server code, fake Microsoft Graph transport. Tenant 0000\u2026, domain contoso-demo.onmicrosoft.com, fictional users. No network, no credentials, no live Microsoft operation.",
+   "tool": null,
+   "args": null,
+   "result": null,
+   "error": null,
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "read",
+   "actor": "ai",
+   "title": "MCP read: get_user",
+   "caption": "The model asks a read-only question. Fixed Graph template, fixed field allowlist, admin targets refused before any call.",
+   "tool": "get_user",
+   "args": {
+    "upn": "alice.demo@contoso-demo.onmicrosoft.com"
+   },
+   "result": {
+    "userPrincipalName": "alice.demo@contoso-demo.onmicrosoft.com",
+    "displayName": "Alice Demo",
+    "accountEnabled": true,
+    "jobTitle": "Analyst",
+    "department": "Finance",
+    "createdDateTime": "2026-01-15T09:00:00Z",
+    "lastPasswordChangeDateTime": "2026-09-01T12:00:00Z",
+    "cloudOnly": true,
+    "usageLocation": "US",
+    "note": "Microsoft Graph exposes no lockout flag; smart lockout clears itself (60 s, growing) and is not readable or clearable by API. Use get_sign_in_logs to see failed sign-ins."
+   },
+   "error": null,
+   "graph_requests": [
+    "GET /users/alice.demo%40contoso-demo.onmicrosoft.com?$select=id,userPrincipalName,displayName,accountEnabled,jobTitle,department,createdDateTime,lastPasswordChangeDateTime,onPremisesSyncEnabled,usageLocation",
+    "GET /users/a1a1a1a1-0000-4000-8000-000000000001/transitiveMemberOf/microsoft.graph.directoryRole?$select=id,displayName",
+    "GET /roleManagement/directory/roleAssignments?$filter=principalId%20eq%20%27a1a1a1a1-0000-4000-8000-000000000001%27&$select=id,roleDefinitionId",
+    "GET /users/a1a1a1a1-0000-4000-8000-000000000001/memberOf?$select=id,displayName,securityEnabled,isAssignableToRole,groupTypes,roleTemplateId&$top=50"
+   ],
+   "human_command": null
+  },
+  {
+   "phase": "read",
+   "actor": "ai",
+   "title": "MCP read: get_last_sign_in",
+   "caption": "signInActivity is returned with its documented 24 h lag noted; when Graph has nothing, the tool says 'unknown', never 'never signed in'.",
+   "tool": "get_last_sign_in",
+   "args": {
+    "upn": "alice.demo@contoso-demo.onmicrosoft.com"
+   },
+   "result": {
+    "userPrincipalName": "alice.demo@contoso-demo.onmicrosoft.com",
+    "status": "known",
+    "lastSignInDateTime": "2026-10-21T14:12:09Z",
+    "lastNonInteractiveSignInDateTime": "2026-10-22T08:01:44Z",
+    "lastSuccessfulSignInDateTime": null
+   },
+   "error": null,
+   "graph_requests": [
+    "GET /users/a1a1a1a1-0000-4000-8000-000000000001?$select=id,signInActivity"
+   ],
+   "human_command": null
+  },
+  {
+   "phase": "validate",
+   "actor": "ai",
+   "title": "Input validation",
+   "caption": "Hostile or malformed arguments are rejected by the strict schema (UPN regex + tenant domain, extra fields forbidden). Zero Graph calls.",
+   "tool": "get_user",
+   "args": {
+    "upn": "alice.demo@contoso-demo.onmicrosoft.com' OR 1=1 --",
+    "extra": "field"
+   },
+   "result": null,
+   "error": {
+    "code": "invalid_arguments",
+    "message": "upn: Value error, userPrincipalName must look like name@domain with letters, digits, '.', '_' or '-' only; extra: Extra inputs are not permitted"
+   },
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "deny",
+   "actor": "ai",
+   "title": "DENIED: write against an admin",
+   "caption": "disable_account on a deny-listed admin is refused at proposal time by the target guard. No proposal is created. Zero Graph calls.",
+   "tool": "disable_account",
+   "args": {
+    "upn": "it.admin@contoso-demo.onmicrosoft.com",
+    "reason": "INC0099 test"
+   },
+   "result": null,
+   "error": {
+    "code": "protected",
+    "message": "this account is protected by the server's deny list; no tool may target it"
+   },
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "propose",
+   "actor": "ai",
+   "title": "Write tool = proposal only",
+   "caption": "revoke_sessions does not touch Graph. It records a proposal with a SHA-256 digest over (tool, args, target, graph call) and a 10-minute expiry.",
+   "tool": "revoke_sessions",
+   "args": {
+    "upn": "carol.demo@contoso-demo.onmicrosoft.com",
+    "reason": "INC0042 lost laptop, revoke all sessions"
+   },
+   "result": {
+    "status": "proposed",
+    "approval_id": "apr_8b7d1c96999a8587",
+    "tool": "revoke_sessions",
+    "target": "carol.demo@contoso-demo.onmicrosoft.com",
+    "would_do": "revoke all sessions/refresh tokens for carol.demo@contoso-demo.onmicrosoft.com",
+    "graph_call": "POST /users/{id}/revokeSignInSessions",
+    "expires_at": "2026-10-23T14:10:14+00:00",
+    "next_step": "A human must approve in Terminal: entra-mcp approve apr_8b7d1c96999a8587  (then call approve with this id). Nothing has changed yet."
+   },
+   "error": null,
+   "graph_requests": [
+    "GET /users/carol.demo%40contoso-demo.onmicrosoft.com?$select=id,userPrincipalName,displayName,accountEnabled,jobTitle,department,createdDateTime,lastPasswordChangeDateTime,onPremisesSyncEnabled,usageLocation",
+    "GET /users/c3c3c3c3-0000-4000-8000-000000000003/transitiveMemberOf/microsoft.graph.directoryRole?$select=id,displayName",
+    "GET /roleManagement/directory/roleAssignments?$filter=principalId%20eq%20%27c3c3c3c3-0000-4000-8000-000000000003%27&$select=id,roleDefinitionId",
+    "GET /users/c3c3c3c3-0000-4000-8000-000000000003/memberOf?$select=id,displayName,securityEnabled,isAssignableToRole,groupTypes,roleTemplateId&$top=50"
+   ],
+   "human_command": null
+  },
+  {
+   "phase": "boundary",
+   "actor": "ai",
+   "title": "The AI cannot approve its own proposal",
+   "caption": "Calling the approve tool on a pending proposal is refused: status is 'pending', not 'approved'. Only the Terminal CLI can change that.",
+   "tool": "approve",
+   "args": {
+    "approval_id": "apr_8b7d1c96999a8587"
+   },
+   "result": null,
+   "error": {
+    "code": "not_approved",
+    "message": "proposal apr_8b7d1c96999a8587 is not approved by a human yet. A person must run in Terminal: entra-mcp approve apr_8b7d1c96999a8587"
+   },
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "human",
+   "actor": "human",
+   "title": "HUMAN approval in Terminal (simulated)",
+   "caption": "A person reviews the proposal and runs the CLI. This is the only code path that moves a proposal to 'approved'. The MCP server never calls it.",
+   "tool": null,
+   "args": null,
+   "result": {
+    "approval_id": "apr_8b7d1c96999a8587",
+    "status": "approved",
+    "approved_by": "cli:jordan (Terminal)",
+    "summary": "revoke all sessions/refresh tokens for carol.demo@contoso-demo.onmicrosoft.com",
+    "graph_call": "POST /users/{id}/revokeSignInSessions"
+   },
+   "error": null,
+   "graph_requests": [],
+   "human_command": "entra-mcp approve apr_8b7d1c96999a8587"
+  },
+  {
+   "phase": "execute",
+   "actor": "ai",
+   "title": "Approved execution",
+   "caption": "Now the approve tool claims the proposal (digest re-verified), sends exactly one write with the operator's delegated token, and records the outcome. No automatic retry.",
+   "tool": "approve",
+   "args": {
+    "approval_id": "apr_8b7d1c96999a8587"
+   },
+   "result": {
+    "status": "executed",
+    "approval_id": "apr_8b7d1c96999a8587",
+    "tool": "revoke_sessions",
+    "target": "carol.demo@contoso-demo.onmicrosoft.com",
+    "executed_as": "ops.operator@contoso-demo.onmicrosoft.com",
+    "graph_status": 200,
+    "request_id": "fake-req",
+    "revoked": true,
+    "result_summary": "revokeSignInSessions -> value=True",
+    "note": "takes effect within minutes; already-issued access tokens live until expiry"
+   },
+   "error": null,
+   "graph_requests": [
+    "GET /users/carol.demo%40contoso-demo.onmicrosoft.com?$select=id,userPrincipalName,displayName,accountEnabled,jobTitle,department,createdDateTime,lastPasswordChangeDateTime,onPremisesSyncEnabled,usageLocation",
+    "GET /users/c3c3c3c3-0000-4000-8000-000000000003/transitiveMemberOf/microsoft.graph.directoryRole?$select=id,displayName",
+    "GET /roleManagement/directory/roleAssignments?$filter=principalId%20eq%20%27c3c3c3c3-0000-4000-8000-000000000003%27&$select=id,roleDefinitionId",
+    "GET /users/c3c3c3c3-0000-4000-8000-000000000003/memberOf?$select=id,displayName,securityEnabled,isAssignableToRole,groupTypes,roleTemplateId&$top=50",
+    "POST /users/c3c3c3c3-0000-4000-8000-000000000003/revokeSignInSessions"
+   ],
+   "human_command": null
+  },
+  {
+   "phase": "replay",
+   "actor": "ai",
+   "title": "Replay refused",
+   "caption": "The same approval id a second time: the proposal is already 'executed'. Single use, enforced by the store under a file lock.",
+   "tool": "approve",
+   "args": {
+    "approval_id": "apr_8b7d1c96999a8587"
+   },
+   "result": null,
+   "error": {
+    "code": "not_executable",
+    "message": "proposal apr_8b7d1c96999a8587 is executed; proposals are single use"
+   },
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "audit",
+   "actor": "system",
+   "title": "Audit trail (redacted JSONL)",
+   "caption": "Every call, allowed or refused, is one line: tool, action, target, actor, decision, Graph status, request id. Tokens and secrets never appear (scan of this run's audit + approval files: clean).",
+   "tool": null,
+   "args": null,
+   "result": [
+    {
+     "ts": "2026-10-23T01:16:00.759+00:00",
+     "tool": "get_user",
+     "target": "alice.demo@contoso-demo.onmicrosoft.com",
+     "decision": "allowed",
+     "graph_status": 200,
+     "graph_calls": 4,
+     "request_id": "fake-req"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.761+00:00",
+     "tool": "get_last_sign_in",
+     "target": "alice.demo@contoso-demo.onmicrosoft.com",
+     "decision": "allowed",
+     "graph_status": 200,
+     "graph_calls": 1,
+     "request_id": "fake-req"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.762+00:00",
+     "tool": "get_user",
+     "decision": "invalid",
+     "graph_calls": 0,
+     "error": "invalid_arguments: upn: Value error, userPrincipalName must look like name@domain with letters, digits, '.', '_' or '-' only; extra: Extra inputs are not permitted"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.762+00:00",
+     "tool": "disable_account",
+     "action": "disable_account",
+     "target": "it.admin@contoso-demo.onmicrosoft.com",
+     "decision": "refused",
+     "graph_calls": 0,
+     "error": "protected: this account is protected by the server's deny list; no tool may target it"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.763+00:00",
+     "tool": "revoke_sessions",
+     "action": "revoke_sessions",
+     "target": "carol.demo@contoso-demo.onmicrosoft.com",
+     "decision": "proposed",
+     "graph_status": 200,
+     "graph_calls": 4,
+     "request_id": "fake-req"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.764+00:00",
+     "tool": "approve",
+     "target": "apr_8b7d1c96999a8587",
+     "decision": "refused",
+     "graph_calls": 0,
+     "error": "not_approved: proposal apr_8b7d1c96999a8587 is not approved by a human yet. A person must run in Terminal: entra-mcp approve apr_8b7d1c96999a8587"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.766+00:00",
+     "tool": "approve",
+     "action": "revoke_sessions",
+     "target": "revoke_sessions -> carol.demo@contoso-demo.onmicrosoft.com",
+     "actor": "ops.operator@contoso-demo.onmicrosoft.com",
+     "decision": "executed",
+     "graph_status": 200,
+     "graph_calls": 4,
+     "request_id": "fake-req"
+    },
+    {
+     "ts": "2026-10-23T01:16:00.767+00:00",
+     "tool": "approve",
+     "target": "apr_8b7d1c96999a8587",
+     "decision": "refused",
+     "graph_calls": 0,
+     "error": "not_executable: proposal apr_8b7d1c96999a8587 is executed; proposals are single use"
+    }
+   ],
+   "error": null,
+   "graph_requests": [],
+   "human_command": null
+  },
+  {
+   "phase": "outro",
+   "actor": "system",
+   "title": "Not demonstrated: Intune device actions",
+   "caption": "sync_device and reboot_device are implemented and mock-tested, gated on a config allowlist of device ids, and still PENDING a disposable enrolled device. Nothing in this demo was a live Microsoft Graph result.",
+   "tool": null,
+   "args": null,
+   "result": null,
+   "error": null,
+   "graph_requests": [],
+   "human_command": null
+  }
+ ]
+}

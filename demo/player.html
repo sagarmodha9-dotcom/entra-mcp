@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>entra-mcp demo</title>
+<style>
+  :root { --bg:#0e1116; --panel:#151a22; --line:#2a3240; --fg:#e6e9ef; --dim:#8b95a7; --ai:#5aa9ff; --human:#ffb454;
+          --sys:#9aa5b8; --ok:#4cd080; --bad:#ff6b6b; --mono:"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif; }
+  #stage { width:1280px; height:720px; position:relative; overflow:hidden; display:grid; grid-template-rows:56px 1fr 74px; }
+  header { display:flex; align-items:center; gap:14px; padding:0 22px; border-bottom:1px solid var(--line); background:#10141b; }
+  header .name { font-weight:650; letter-spacing:.2px; }
+  header .tag { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--dim); }
+  header .sim { border-color:#7a4b00; color:#ffb454; background:#2a1d08; font-weight:600; }
+  header .right { margin-left:auto; color:var(--dim); font-size:13px; }
+  main { display:grid; grid-template-columns:420px minmax(0,1fr); min-height:0; }
+  #left { border-right:1px solid var(--line); padding:18px 20px; display:flex; flex-direction:column; gap:12px; background:var(--panel); }
+  #phase { font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--dim); }
+  #title { font-size:24px; font-weight:650; line-height:1.2; }
+  #caption { color:#c6cdd9; font-size:15.5px; }
+  #actor { display:inline-flex; align-items:center; gap:8px; font-size:13px; padding:5px 10px; border-radius:6px; width:max-content; }
+  #actor.ai { background:#0f2740; color:var(--ai); } #actor.human { background:#3a2708; color:var(--human); } #actor.system { background:#1c222c; color:var(--sys); }
+  #steps { margin-top:auto; display:flex; gap:5px; }
+  #steps i { flex:1; height:5px; border-radius:3px; background:#232a36; } #steps i.done { background:var(--ai); } #steps i.now { background:#fff; }
+  #right { padding:18px 22px; min-height:0; min-width:0; display:flex; flex-direction:column; gap:12px; }
+  .term { background:#0a0d12; border:1px solid var(--line); border-radius:8px; padding:14px 16px; font-family:var(--mono); font-size:13.5px; line-height:1.5; white-space:pre-wrap; word-break:break-word; overflow:hidden; }
+  .term.req { color:#d7dde8; } .term.res { flex:1; color:#c8d0dc; }
+  .k { color:#7fb3ff; } .s { color:#b7e3a1; } .n { color:#f3c26b; } .b { color:#e6a1ff; } .c { color:var(--dim); }
+  .prompt { color:var(--ok); } .err { color:var(--bad); } .hum { color:var(--human); }
+  .verdict { display:flex; gap:10px; align-items:center; font-size:14px; }
+  .pill { padding:4px 10px; border-radius:6px; font-weight:600; font-family:var(--mono); font-size:12.5px; }
+  .pill.ok { background:#10301d; color:var(--ok); } .pill.bad { background:#3a1414; color:var(--bad); } .pill.info { background:#1c222c; color:var(--dim); }
+  footer { border-top:1px solid var(--line); padding:12px 22px; display:flex; align-items:center; gap:18px; color:var(--dim); font-size:13px; background:#10141b; }
+  footer .big { color:var(--fg); font-size:15px; }
+  .audit { border-collapse:collapse; table-layout:auto; max-width:100%; }
+  .audit td { padding:3px 10px 3px 0; font-family:var(--mono); font-size:11.5px; vertical-align:top; white-space:nowrap; }
+  .audit th { text-align:left; color:var(--dim); font-weight:500; padding:0 10px 6px 0; font-size:11.5px; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <span class="name">entra-mcp</span>
+    <span class="tag">approval-gated MCP server · Entra ID + Intune</span>
+    <span class="tag sim">SIMULATED · fake Graph transport · fictional tenant</span>
+    <span class="right" id="clock"></span>
+  </header>
+  <main>
+    <section id="left">
+      <div id="phase"></div>
+      <div id="title"></div>
+      <div id="actor"></div>
+      <div id="caption"></div>
+      <div id="steps"></div>
+    </section>
+    <section id="right">
+      <div class="term req" id="req"></div>
+      <div class="term res" id="res"></div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+  </main>
+  <footer>
+    <span class="big" id="foot"></span>
+    <span style="margin-left:auto">github.com/sagarmodha9-dotcom/entra-mcp</span>
+  </footer>
+</div>
+<script id="transcript" type="application/json">__TRANSCRIPT__</script>
+<script>
+const T = JSON.parse(document.getElementById('transcript').textContent);
+const steps = T.steps;
+const params = new URLSearchParams(location.search);
+const SPEED = parseFloat(params.get('speed') || '1');          // >1 = faster
+const q = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function hl(obj){ // syntax-highlighted JSON
+  const j = JSON.stringify(obj, null, 2);
+  return q(j).replace(/("(?:[^"\\]|\\.)*")(\s*:)?/g, (m,a,b)=> b ? `<span class="k">${a}</span>${b}` : `<span class="s">${a}</span>`)
+             .replace(/\b(true|false|null)\b/g,'<span class="b">$1</span>')
+             .replace(/\b(-?\d+(?:\.\d+)?)\b(?![^<]*<\/span>)/g,'<span class="n">$1</span>');
+}
+const PHASE = {intro:'Framing', read:'1 · Read-only tools', validate:'2 · Input validation', deny:'3 · Safety control',
+               propose:'4 · Proposal', boundary:'5 · Human-approval boundary', human:'5 · Human-approval boundary',
+               execute:'6 · Approved execution', replay:'7 · Replay prevention', audit:'8 · Audit trail', outro:'Scope'};
+const FOOT = {intro:'Nothing here reaches Microsoft. The transport is an in-repo HTTP mock; the server code is the real thing.',
+              read:'Reads use an app-only token with five *.Read.All permissions. 21 fixed URL templates; no other URL can be built.',
+              validate:'pydantic strict + extra=forbid: rejected arguments make zero Graph calls and are still audited.',
+              deny:'Deny list → directory roles → role assignments → role-assignable groups. Fail closed.',
+              propose:'A write tool never writes. It records what WOULD run and hands the decision to a person.',
+              boundary:'The model can propose and execute, never approve. Approval exists only in the Terminal CLI.',
+              human:'A human ran the CLI. The transcript labels this step as the human\'s action; the AI did not approve itself.',
+              execute:'One request, sent once, with the operator\'s delegated token. Timeout → "uncertain", never a blind retry.',
+              replay:'pending → approved → executed is one-way. Expired, denied, tampered and executed proposals cannot run.',
+              audit:'Who asked, what action, which target, which operator, what Graph said, which request id. No credentials.',
+              outro:'Device actions stay pending until a disposable device is enrolled. Nothing untested is shown as working.'};
+const DUR = {intro:7000, read:10000, validate:9000, deny:10000, propose:12000, boundary:10000, human:11000, execute:12000, replay:8000, audit:14000, outro:9000};
+const $ = id => document.getElementById(id);
+$('steps').innerHTML = steps.map(()=>'<i></i>').join('');
+const bars = [...$('steps').children];
+const sleep = ms => new Promise(r=>setTimeout(r, ms/SPEED));
+async function type(el, html, total){ // reveal html progressively (by text length) without breaking tags
+  el.innerHTML = ''; const tmp = document.createElement('div'); tmp.innerHTML = html;
+  const text = tmp.textContent; const n = text.length; const stepN = Math.max(1, Math.round(n/40));
+  for (let i=0;i<n;i+=stepN){ el.innerHTML = html; clipTo(el, i); await sleep(total/40); }
+  el.innerHTML = html;
+}
+function clipTo(el, count){ // walk text nodes and truncate after `count` characters
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let left = count; const kill=[];
+  for (let t=w.nextNode(); t; t=w.nextNode()){ if (left<=0){ kill.push(t); continue; } if (t.data.length>left){ t.data = t.data.slice(0,left); left=0; } else left -= t.data.length; }
+  kill.forEach(t=>t.data='');
+}
+function reqHtml(s){
+  if (s.human_command) return `<span class="hum">$ </span>${q(s.human_command)}\n<span class="c"># human at the keyboard (Terminal) · simulated for this demo</span>`;
+  if (!s.tool) return `<span class="c"># ${q(s.title)}</span>`;
+  return `<span class="prompt">tools/call</span> <span class="k">${q(s.tool)}</span>\n${hl(s.args)}`;
+}
+function resHtml(s){
+  if (s.phase==='audit'){
+    const rows = s.result.map(r=>`<tr><td>${q(r.ts.slice(11,19))}</td><td>${q(r.tool)}</td><td>${q(r.action||'')}</td><td>${q((r.target||'').replace(/@[^ ]+/g,''))}</td><td>${q((r.actor||'').split('@')[0])}</td><td class="${/allowed|executed|proposed/.test(r.decision)?'prompt':'err'}">${q(r.decision)}</td><td>${r.graph_status??''}</td><td>${r.graph_calls??''}</td></tr>`).join('');
+    return `<table class="audit"><tr><th>ts</th><th>tool</th><th>action</th><th>target</th><th>actor</th><th>decision</th><th>http</th><th>calls</th></tr>${rows}</table>`;
+  }
+  if (s.error) return `<span class="err">error</span> ${hl(s.error)}`;
+  if (s.result==null) return `<span class="c">${q(s.caption)}</span>`;
+  return hl(s.result);
+}
+function verdict(s){
+  const g = s.graph_requests||[]; const calls = g.length;
+  const pill = (cls, t)=>`<span class="pill ${cls}">${q(t)}</span>`;
+  if (s.phase==='validate') return pill('bad','REJECTED · invalid_arguments') + pill('ok',`${calls} Graph calls`);
+  if (s.phase==='deny') return pill('bad','REFUSED · protected target') + pill('ok',`${calls} Graph calls`);
+  if (s.phase==='propose') return pill('info','status: proposed') + pill('ok', `${g.filter(x=>!x.startsWith('GET')).length} writes sent`);
+  if (s.phase==='boundary') return pill('bad','REFUSED · not_approved') + pill('ok', `${g.filter(x=>!x.startsWith('GET')).length} writes sent`);
+  if (s.phase==='human') return pill('ok','approved_by: cli:jordan (Terminal)') + pill('info','human step');
+  if (s.phase==='execute') return pill('ok','EXECUTED · Graph 200') + pill('info', g.filter(x=>!x.startsWith('GET')).join(' '));
+  if (s.phase==='replay') return pill('bad','REFUSED · not_executable') + pill('ok','single use');
+  if (s.phase==='read') return pill('ok','allowed') + pill('info', `${calls} Graph GETs (user + guard lookups)`);
+  if (s.phase==='audit') return pill('ok','no tokens or secrets in the log');
+  return '';
+}
+async function run(){
+  for (let i=0;i<steps.length;i++){
+    const s = steps[i]; const d = DUR[s.phase]||9000;
+    bars.forEach((b,j)=>{ b.className = j<i?'done':(j===i?'now':''); });
+    $('phase').textContent = PHASE[s.phase]||s.phase; $('title').textContent = s.title;
+    $('actor').className = s.actor; $('actor').textContent = {ai:'AI · MCP client (Claude Desktop)', human:'HUMAN · Terminal', system:'SYSTEM'}[s.actor];
+    $('caption').textContent = s.caption; $('foot').textContent = FOOT[s.phase]||''; $('verdict').innerHTML='';
+    $('res').innerHTML=''; $('clock').textContent = `step ${i+1} / ${steps.length}`;
+    await type($('req'), reqHtml(s), d*0.25);
+    await sleep(d*0.1);
+    await type($('res'), resHtml(s), d*0.35);
+    $('verdict').innerHTML = verdict(s);
+    await sleep(d*0.3);
+  }
+  bars.forEach(b=>b.className='done');
+  document.body.dataset.done = '1';
+}
+run();
+</script>
+</body>
+</html>

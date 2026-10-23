@@ -64,7 +64,9 @@ class TargetGuard:
                               "target", "admin_target")
             member_of = self.graph.get("user_member_of", id=uid, top=50)
         except GraphError as e:
-            raise Refused(f"guard lookup failed (HTTP {e.status}); refusing (fail closed)", "guard_error") from None
+            why = "got no response within the tool deadline" if e.status in (0, -1) else f"failed (HTTP {e.status})"
+            raise Refused(f"guard lookup {why}; refusing (fail closed): the server cannot confirm the target is not "
+                          f"an admin, so it does nothing", "guard_error") from None
         groups = member_of.get("value", []) if isinstance(member_of, dict) else []
         if any(g.get("isAssignableToRole") is True for g in groups):
             raise Refused("target is in a role-assignable group; refusing", "admin_target")

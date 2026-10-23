@@ -21,6 +21,7 @@ class Config:
     page_size: int
     max_retries: int
     audit_path: Path
+    tool_deadline_seconds: float = 40.0      # hard wall-clock cap per tool call, all Graph requests and retries included
     writes_client_id: str = ""                    # second app registration (delegated); empty = write path off
     token_cache_path: Path = Path.home() / "Library/Application Support/entra-mcp/msal_cache.bin"
     approvals_path: Path = Path("audit/approvals.json")
@@ -57,6 +58,7 @@ def load_config(path: str | Path | None = None) -> Config:
         test_device_ids=frozenset(d.get("test_device_ids", [])),
         timeout_seconds=float(lim.get("timeout_seconds", 10)), page_size=min(max(page, 1), 50),
         max_retries=int(lim.get("max_retries", 3)),
+        tool_deadline_seconds=float(lim.get("tool_deadline_seconds", 40)),
         audit_path=Path(os.environ.get("ENTRA_MCP_AUDIT") or (p.parent / a.get("path", "audit/entra-mcp.jsonl"))).resolve(),
         writes_client_id=w.get("client_id", ""),
         token_cache_path=Path(os.environ.get("ENTRA_MCP_TOKEN_CACHE") or os.path.expanduser(

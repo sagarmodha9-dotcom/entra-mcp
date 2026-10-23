@@ -23,6 +23,6 @@ echo "--- 3. files that must never have been tracked, in any commit ---"
 tracked=$(git log --all --name-only --pretty=format: | sort -u | grep -E "audit/.*\.(jsonl|json)$|tenant\.json|msal_cache|^\.env$|approvals\.lock" || true)
 if [ -n "$tracked" ]; then echo "$tracked"; fail=1; else echo "none"; fi
 echo "--- 4. gitleaks (if installed) ---"
-if command -v gitleaks >/dev/null; then gitleaks git --redact -v . || fail=1; else echo "gitleaks not installed (optional): brew install gitleaks"; fi
+if command -v gitleaks >/dev/null; then gitleaks git --redact -c .gitleaks.toml . || fail=1; else echo "gitleaks not installed (optional): brew install gitleaks"; fi
 echo; if [ $fail -eq 0 ]; then echo "HISTORY SCAN: CLEAN (exit 0)"; else echo "HISTORY SCAN: FINDINGS ABOVE (exit 1)"; fi
 exit $fail

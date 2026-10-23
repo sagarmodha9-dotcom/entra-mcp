@@ -17,6 +17,24 @@ checklist are in `ACCEPTANCE.md`. A ten-minute walkthrough of what a reviewer se
 
 ![architecture](docs/architecture.svg)
 
+## Demo (simulated, 2 minutes)
+
+![demo](docs/demo.gif)
+
+**Everything in this recording is simulated.** It runs the real server code (schemas, allowlist, target guard,
+approval store, write engine, audit log) against the in-repo fake Graph transport, on a fictional tenant
+(`00000000-…`, `contoso-demo.onmicrosoft.com`, invented users). No network, no credentials, no live Microsoft
+operation. The twelve steps: a read, a rejected hostile argument, a **denied** write against an admin, a proposal,
+the AI's own `approve` call refused, a **human** approving in Terminal (simulated by calling the same function
+the CLI calls, and labelled as such), the approved execution, a replay refused, and the redacted audit trail.
+Intune device actions are deliberately not shown: they are mock-tested and pending a disposable enrolled device.
+
+Reproduce it: `python demo/run_demo.py` (writes `demo/transcript.json` from a fresh run) then `python demo/record.py`
+(builds the self-contained `demo/demo.html`, records it with Playwright, encodes `docs/demo.mp4` and `docs/demo.gif`).
+Needs `pip install -e ".[demo]"`, `python -m playwright install chromium` once, and ffmpeg on PATH. Without them,
+open `demo/demo.html` in a browser: it plays itself. Verified from a clean checkout and a fresh virtualenv: identical
+12-step transcript, 109 tests, playable 2:01 video.
+
 ## How a write happens
 
 ```
@@ -70,11 +88,18 @@ Things Graph cannot do, stated in the tool descriptions rather than papered over
 - `auditLogs/signIns` filtered by user is slow and occasionally stalls: 9–19 s per call on this tenant, with a
   30 s timeout on roughly one call in three across the recorded runs (one run saw none after the server stopped
   sending a `ConsistencyLevel: eventual` header; the next run saw one again, so the header was not the whole
-  story), and one 61 s outlier in the next-day run. This template now has its own budget (20 s per attempt, one
-  retry): a stall becomes `status: unavailable` with a reason after at most ~40 s instead of an error after a
-  minute. The tool description tells the model to expect the wait. Logs are kept 30 days on Entra ID P1.
-- `signInActivity` reads occasionally stall for the full 30 s timeout (2 of 20 calls in each recorded run) and
-  succeed on retry; p50 stays around 1 s.
+  story), and one 61 s outlier in the next-day run. This template has its own budget (20 s per attempt, one
+  retry), and every tool call runs under a hard 40 s wall-clock deadline (`limits.tool_deadline_seconds`) that
+  covers all its Graph requests and retries: a stall becomes `status: unavailable` with a reason, never a hang.
+  Measured after the budget, before the deadline: 17.4 / 12.8 / 10.7 s and 17.4 / 41.3 / 17.1 s (the 41 s call
+  was one 20 s stall plus a successful retry). The tool description tells the model to expect the wait. Logs are
+  kept 30 days on Entra ID P1.
+- `signInActivity` reads occasionally stall (2 of 20 calls in each recorded run) and succeed on retry; p50 stays
+  around 1 s. The per-request timeout is 10 s and the 40 s tool deadline caps the retry loop. A live run with the
+  10 s timeout active still showed two 31 s calls, which places the stall outside the socket (name resolution is
+  not covered by `requests.timeout`); the transport therefore runs each call in a worker thread and abandons it
+  at the wall-clock bound, and uses one pooled session so lookups are rare. Layer T proves both bounds without
+  real waiting; the live effect is recorded in `tests/live_results.md` once re-measured.
 
 ## Security design
 

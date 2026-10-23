@@ -24,4 +24,5 @@ src/entra_mcp.egg-info/requires.txt
 src/entra_mcp.egg-info/top_level.txt
 tests/test_a_protocol.py
 tests/test_b_authorization.py
+tests/test_t_timeouts.py
 tests/test_w_writes.py

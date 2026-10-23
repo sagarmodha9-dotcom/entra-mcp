@@ -1,0 +1,31 @@
+# gitleaks configuration: default rules, plus ONE narrow exception.
+#
+# Finding: rule `jwt`, tests/test_b_authorization.py line 144 (first seen in commit 08d4e3e).
+# Verified synthetic on 2026-10-23: the token decodes to header {"alg":"RS256","typ":"JWT"},
+# payload {"aud":"https://graph.microsoft.com"} and a signature segment that is the ASCII word "signature".
+# No issuer, tenant, subject, expiry or key material; it is a fixture that proves the redaction filter scrubs
+# JWT-shaped strings (test B6). The exception matches that exact literal and nothing else: any other JWT-shaped
+# string, in that file or anywhere in the history, is still reported. (A `paths` entry is deliberately NOT used:
+# gitleaks applies global path allowlists as whole-file skips, which would exempt the entire test file.)
+title = "entra-mcp gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "B6 redaction fixtures, exact literals only: a verified-synthetic JWT and a fake client-secret-shaped string that spells out 'fakeSecretValue_ForTestOnly' (tests/test_b_authorization.py)"
+regexes = [
+  '''eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9\.eyJhdWQiOiJodHRwczovL2dyYXBoLm1pY3Jvc29mdC5jb20ifQ\.c2lnbmF0dXJl''',
+  '''Abc8Q~fakeSecretValue_ForTestOnly\.1234567890abcdefgh''',
+]
+regexTarget = "match"
+
+# gitleaks' default rule set has no pattern for Microsoft Entra application client secrets, which is the one
+# secret type this project holds (in the macOS Keychain, never in the repo). Added so the independent scanner
+# covers it. Verified: a planted value of this shape in src/ is reported. The B6 fixture value (which literally
+# spells 'fakeSecretValue_ForTestOnly') is the second exact-literal exception above.
+[[rules]]
+id = "entra-client-secret"
+description = "Microsoft Entra application (client) secret"
+regex = '''\b[A-Za-z0-9_~.-]{3}8Q~[A-Za-z0-9_~.-]{30,}'''
+keywords = ["8Q~"]

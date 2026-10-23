@@ -1,9 +1,9 @@
-# Layers A, B and W: protocol, server-authorization and write-path tests (MOCKED Graph, no tenant)
+# Layers A, B, W and T: protocol, server-authorization, write-path and bounded-latency tests (MOCKED Graph, no tenant)
 
 These tests never contact Microsoft. Graph is an HTTP mock that records every request and fails the suite on anything but GET. They prove what the SERVER does; they prove nothing about the tenant. Live tenant evidence is in `tests/live_results.md` and `EVIDENCE.md`, produced by `tests/live_m1.py`.
 
-Run: 2026-10-23 00:36 UTC  Python 3.12.15  
-Result: **97 passed, 0 failed, 97 tests**
+Run: 2026-10-23 01:25 UTC  Python 3.12.15  
+Result: **109 passed, 0 failed, 109 tests**
 
 | layer | test | result |
 |---|---|---|
@@ -57,6 +57,18 @@ Result: **97 passed, 0 failed, 97 tests**
 | B server authorization | `test_b5_token_roles_contain_no_write_scope_and_match_the_five_reads` | passed |
 | B server authorization | `test_b6_secret_and_tokens_never_reach_logs_errors_or_results` | passed |
 | B server authorization | `test_b6_repo_contains_no_secret_shaped_string` | passed |
+| T bounded latency (fake clock) | `test_t1_no_request_timeout_outlives_the_deadline` | passed |
+| T bounded latency (fake clock) | `test_t2_deadline_caps_retry_loops_and_names_it` | passed |
+| T bounded latency (fake clock) | `test_t3_last_sign_in_degrades_to_unavailable_not_error` | passed |
+| T bounded latency (fake clock) | `test_t4_slow_but_answering_endpoint_still_succeeds` | passed |
+| T bounded latency (fake clock) | `test_t5_sign_in_log_keeps_its_20s_budget_inside_the_deadline` | passed |
+| T bounded latency (fake clock) | `test_t6_every_read_tool_is_bounded_when_graph_never_answers[get_last_sign_in]` | passed |
+| T bounded latency (fake clock) | `test_t6_every_read_tool_is_bounded_when_graph_never_answers[get_sign_in_logs]` | passed |
+| T bounded latency (fake clock) | `test_t6_every_read_tool_is_bounded_when_graph_never_answers[get_user]` | passed |
+| T bounded latency (fake clock) | `test_t6_every_read_tool_is_bounded_when_graph_never_answers[list_auth_methods]` | passed |
+| T bounded latency (fake clock) | `test_t6_every_read_tool_is_bounded_when_graph_never_answers[list_devices]` | passed |
+| T bounded latency (fake clock) | `test_t6_every_read_tool_is_bounded_when_graph_never_answers[list_user_groups]` | passed |
+| T bounded latency (fake clock) | `test_t7_requests_transport_is_wall_clock_bounded_even_when_the_stall_is_outside_the_socket` | passed |
 | W write path (approvals) | `test_w1_every_write_tool_only_proposes[disable_account-args0]` | passed |
 | W write path (approvals) | `test_w1_every_write_tool_only_proposes[enable_account-args1]` | passed |
 | W write path (approvals) | `test_w1_every_write_tool_only_proposes[reset_password-args2]` | passed |

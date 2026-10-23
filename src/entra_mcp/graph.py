@@ -45,6 +45,8 @@ _MESSAGES = {
     503: "Graph service unavailable (503); retried with backoff and still unavailable.",
     0: "No response from Graph (timeout or connection error); retried and still failing. The sign-in log endpoint "
        "in particular can take several seconds; try again.",
+    -1: "Tool deadline exhausted: Graph did not answer all of this tool's requests within the configured wall-clock "
+        "budget (limits.tool_deadline_seconds). The result is unavailable, not wrong; try again or narrow the query.",
 }
 
 
@@ -52,18 +54,45 @@ class TransportError(Exception):
     """Raised by a transport when no HTTP response was obtained (timeout, DNS, connection reset)."""
 
 
+_POOL = None
+_SESSION = None
+
+
+def _session():
+    """One pooled requests.Session: keep-alive connections mean far fewer DNS lookups and TLS handshakes."""
+    global _SESSION
+    if _SESSION is None:
+        import requests
+        _SESSION = requests.Session()
+    return _SESSION
+
+
 def requests_transport(method: str, url: str, headers: dict[str, str], timeout: float,
                        body: dict | None = None) -> Response:
+    """HTTP transport with a WALL-CLOCK bound. `requests`' timeout covers connect and per-read waits only; a stall in
+    DNS resolution (getaddrinfo) or anywhere else outside the socket is not covered and was measured live at ~30 s
+    on macOS even with timeout=10. The call therefore runs in a worker thread and is abandoned after `timeout`
+    seconds of wall time; the thread finishes on its own later and its result is discarded."""
+    import concurrent.futures
     import requests
+    global _POOL
+    if _POOL is None:
+        _POOL = concurrent.futures.ThreadPoolExecutor(max_workers=8, thread_name_prefix="graph-http")
+
+    def do():
+        return _session().request(method, url, headers=headers, timeout=timeout, json=body)
+    fut = _POOL.submit(do)
     try:
-        r = requests.request(method, url, headers=headers, timeout=timeout, json=body)
+        r = fut.result(timeout=timeout + 0.5)
+    except concurrent.futures.TimeoutError:
+        raise TransportError(f"WallClockTimeout>{timeout:g}s") from None
     except requests.RequestException as e:
         raise TransportError(type(e).__name__) from None
     try:
-        body = r.json()
+        body_out = r.json()
     except ValueError:
-        body = r.text
-    return Response(r.status_code, {k.lower(): v for k, v in r.headers.items()}, body)
+        body_out = r.text
+    return Response(r.status_code, {k.lower(): v for k, v in r.headers.items()}, body_out)
 
 
 def msal_token_provider(cfg: Config, secret: str) -> Callable[[], str]:
@@ -98,6 +127,14 @@ class GraphClient:
         self.last_status = 0
         self.calls = 0            # every HTTP request, retries included
         self.timings: list[tuple[str, int, int | str]] = []   # (template, ms, http status or "timeout") per request
+        self.deadline: float | None = None   # perf_counter() instant set by Engine.run; every request fits inside it
+        self.clock = time.perf_counter
+
+    def start_deadline(self, seconds: float) -> None:
+        self.deadline = self.clock() + seconds
+
+    def _remaining(self) -> float | None:
+        return None if self.deadline is None else self.deadline - self.clock()
 
     #: templates this client may execute. The read client is constructed with READ_TEMPLATES and physically
     #: cannot send a write template, whatever token it holds.
@@ -125,6 +162,12 @@ class GraphClient:
         headers = {"Authorization": f"Bearer {self._token()}", "Accept": "application/json"}
         delay = 1.0
         for attempt in range(retries + 1):
+            remaining = self._remaining()
+            if remaining is not None:
+                if remaining < 1.0:                       # not worth starting a request that cannot finish
+                    self.last_status, self.last_request_id = -1, ""
+                    raise GraphError(-1, "deadline", _MESSAGES[-1])
+                timeout = min(timeout, remaining)          # the per-request timeout never outlives the tool deadline
             self.calls += 1
             t_req = time.perf_counter()
             try:
@@ -133,10 +176,13 @@ class GraphClient:
             except TransportError as e:
                 self.timings.append((template, int((time.perf_counter() - t_req) * 1000), "timeout"))
                 self.last_status, self.last_request_id = 0, ""
-                if attempt < retries:
+                rem = self._remaining()
+                if attempt < retries and (rem is None or rem > min(delay, 30.0) + 1.0):
                     self._sleep(min(delay, 30.0))
                     delay *= 2
                     continue
+                if rem is not None and rem <= min(delay, 30.0) + 1.0:
+                    raise GraphError(-1, "deadline", f"{_MESSAGES[-1]} (last error: {e})") from None
                 raise GraphError(0, "no_response", f"{_MESSAGES[0]} ({e})") from None
             self.last_status = resp.status
             self.last_request_id = resp.headers.get("request-id", "") or resp.headers.get("client-request-id", "")

@@ -66,6 +66,8 @@ class Engine:
         calls_before = getattr(self.graph, "calls", 0)
         target = None
         ctx: dict = {}
+        if hasattr(self.graph, "start_deadline"):
+            self.graph.start_deadline(self.cfg.tool_deadline_seconds)   # every Graph request of this call fits inside
         try:
             schema = self._schema(tool)
             if schema is None:
@@ -109,6 +111,8 @@ class Engine:
             self._log(tool, raw_args, target, "error", t0, calls_before, error=f"graph_{e.status}: {e}")
             if e.status == 404:
                 raise ToolError("not_found", str(e)) from None
+            if e.status in (0, -1):
+                raise ToolError("unavailable", str(e)) from None        # explicit, bounded; never a hang, never a guess
             raise ToolError(f"graph_{e.status}", str(e)) from None
         except ApprovalError as e:
             self._log(tool, raw_args, target, "refused", t0, calls_before, error=f"{e.code}: {e}")
@@ -151,6 +155,8 @@ class Engine:
             if e.status in (403,):
                 return {**base, "status": "unavailable",
                         "reason": "Graph refused signInActivity (403): needs Entra ID P1 and AuditLog.Read.All"}
+            if e.status in (0, -1):
+                return {**base, "status": "unavailable", "reason": str(e)}
             raise
         act = r.get("signInActivity") if isinstance(r, dict) else None
         if not act:
@@ -212,11 +218,11 @@ class Engine:
             if e.status == 403:
                 return {"userPrincipalName": t.upn, "status": "unavailable",
                         "reason": "sign-in logs refused (403): needs Entra ID P1 and AuditLog.Read.All"}
-            if e.status == 0:
+            if e.status in (0, -1):
                 return {"userPrincipalName": t.upn, "status": "unavailable",
-                        "reason": "Graph's sign-in log query did not answer within the 20 s budget (twice). This endpoint "
-                                  "is slow on this tenant (9-19 s typical, occasional stalls); try again, or narrow "
-                                  "days/top."}
+                        "reason": "Graph's sign-in log query did not answer within the 20 s per-attempt budget / the "
+                                  "tool deadline. This endpoint is slow on this tenant (10-19 s typical, occasional "
+                                  "stalls); try again, or narrow days/top."}
             raise
         rows = []
         for s in r.get("value", []) if isinstance(r, dict) else []:

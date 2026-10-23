@@ -23,9 +23,11 @@ cache_seconds = 60
 test_device_ids = []
 
 [limits]
-timeout_seconds = 30     # auditLogs/signIns was observed at 5-8 s on the trial tenant
+timeout_seconds = 10        # per request; measured p50 ~1 s, max ~2.5 s for every read except the sign-in log
+                            # (which has its own 20 s per-attempt budget in graph.py)
 page_size = 20
 max_retries = 3
+tool_deadline_seconds = 40  # hard wall-clock cap per tool call, all requests + retries; then `unavailable`
 
 [audit]
 path = "audit/entra-mcp.jsonl"
