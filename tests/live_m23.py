@@ -9,7 +9,7 @@ disable -> enable, add to group -> remove, revoke sessions (test user), TAP (exp
 test account. Admin accounts are refused by the server and that refusal is one of the recorded tests.
 
 Writes tests/live_results_m23.md and appends the milestone 2-4 section of EVIDENCE.md (sanitized; passwords and
-TAP codes are shown once in this Terminal and never written anywhere).
+TAP codes are never displayed by this script and never written anywhere).
 """
 from __future__ import annotations
 
@@ -67,13 +67,11 @@ def approve_interactively(engine: Engine, proposal: dict) -> dict | None:
     return engine.run("approve", {"approval_id": proposal["approval_id"]})
 
 
-SHOW_SECRETS = "--show-secrets" in sys.argv
-
-
 def once(label: str, value: str) -> None:
-    """Secrets are masked on screen unless --show-secrets is given, because Terminal output tends to get pasted."""
-    shown = value if SHOW_SECRETS else value[:2] + "*" * (len(value) - 2)
-    print(f"    {label} (shown once{'' if SHOW_SECRETS else ', masked; pass --show-secrets to reveal'}): {shown}")
+    """The live script never prints a generated password or TAP, in any form. Terminal output gets pasted; the value
+    is returned by the tool to its caller and nowhere else. Only its length and character classes are reported."""
+    classes = sum(bool(re.search(c, value)) for c in (r"[a-z]", r"[A-Z]", r"[0-9]", r"[^A-Za-z0-9]"))
+    print(f"    {label}: not displayed (length {len(value)}, {classes} character classes)")
 
 
 def main() -> int:
@@ -169,7 +167,7 @@ def main() -> int:
     pw_before = engine.run("get_user", {"upn": carol}).get("lastPasswordChangeDateTime")
     o = do("M3-4", "reset_password", {"upn": carol, "reason": "LIVE-M3-4 admin reset on test user"},
            lambda o: (o.get("graph_accepted") == 202 and len(o.get("temporaryPassword", "")) >= 20,
-                      f"accepted={o.get('graph_accepted')} password length={len(o.get('temporaryPassword', ''))} (value shown once below, never written)"))
+                      f"accepted={o.get('graph_accepted')} password length={len(o.get('temporaryPassword', ''))} (value not displayed, never written)"))
     if o:
         once("temporary password for carol.test", o["temporaryPassword"])
         changed = None
@@ -184,7 +182,7 @@ def main() -> int:
             f"before={pw_before} after={changed or 'unchanged within 60 s'}")
     o = do("M3-5", "create_temporary_access_pass", {"upn": carol, "reason": "LIVE-M3-5 TAP on test user", "lifetime_minutes": 60},
            lambda o: (bool(o.get("temporaryAccessPass")) and o.get("lifetimeInMinutes") == 60,
-                      f"lifetime={o.get('lifetimeInMinutes')} oneTime={o.get('isUsableOnce')} (code shown once below, never written)"))
+                      f"lifetime={o.get('lifetimeInMinutes')} oneTime={o.get('isUsableOnce')} (code not displayed, never written)"))
     if o:
         once("TAP for carol.test", o["temporaryAccessPass"])
         kinds, waited = [], 0

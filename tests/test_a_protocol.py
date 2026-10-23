@@ -233,3 +233,23 @@ def test_a6_sign_in_logs_have_a_20s_budget_and_one_retry(engine):
     assert r["status"] == "unavailable" and "20 s" in r["reason"]
     assert seen == [20.0, 20.0], seen            # two attempts at 20 s each, never the 30 s x 4 default
     assert engine.audit.read_all()[-1]["decision"] == "allowed"   # a clear answer, not a crash
+
+
+def test_a7_tap_visible_in_auth_methods_without_its_code(engine, fake):
+    """Regression for live M3-5b. Graph lists a registered TAP as temporaryAccessPassMethod; the tool must report the
+    type and isUsable, and must not return the id, the code, or any field a TAP could be reconstructed from.
+    Mocked only: no TAP is created here."""
+    import json
+    url = "https://graph.microsoft.com/v1.0/users/d55e0f39-0000-4000-8000-000000000001/authentication/methods"
+    tap = {"@odata.type": "#microsoft.graph.temporaryAccessPassAuthenticationMethod", "id": "f1d2d2f9-0000-4000-8000-00000000aaaa",
+           "temporaryAccessPass": None, "createdDateTime": "2026-10-23T00:05:00Z", "startDateTime": "2026-10-23T00:05:00Z",
+           "lifetimeInMinutes": 60, "isUsableOnce": True, "isUsable": False, "methodUsabilityReason": "Expired"}
+    fake.exact[url] = {"status": 200, "body": {"value": fake.prefix[url]["body"]["value"] + [tap]}}
+    r = engine.run("list_auth_methods", {"upn": ALICE})
+    kinds = [m["type"] for m in r["methods"]]
+    assert "temporaryAccessPass" in kinds and r["count"] == 3
+    entry = next(m for m in r["methods"] if m["type"] == "temporaryAccessPass")
+    assert entry["isUsable"] is False
+    text = json.dumps(r)
+    for forbidden in ("f1d2d2f9", "lifetimeInMinutes", "startDateTime", "methodUsabilityReason", "\"temporaryAccessPass\":"):
+        assert forbidden not in text, forbidden

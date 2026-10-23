@@ -10,7 +10,7 @@ Status vocabulary, used exactly:
 | **pending** | code is in place; its live row waits on a precondition that has not happened yet |
 | **blocked** | cannot progress until something outside the code changes |
 
-Mocked suite: **96 passed** (`tests/unit_results.md`). Live runs: milestone 1 (`live_m1.py`), milestones 2–4 (`live_m23.py`),
+Mocked suite: **97 passed** (`tests/unit_results.md`). Live runs: milestone 1 (`live_m1.py`), milestones 2–4 (`live_m23.py`),
 Claude Desktop recorder (`record_c10.py`). Dates are in the result files. No live identity write was performed to fill this
 matrix; every live row below cites a run that already happened.
 
@@ -39,19 +39,20 @@ matrix; every live row below cites a run that already happened.
 |---|---|---|
 | Redaction filter on every audit line, approval record and error (JWTs, secret shapes, phone numbers, IPs, registered secret values) | implemented, mock-tested (B6), live-tested (B6, B6-w) | `redact.py`; audit and approval files scanned after each live run |
 | Results writers mask non-test UPNs, truncate GUIDs, drop response bodies | implemented, live-tested | `tests/live_results*.md` reviewed; admin activity reduced to counts in `live_results_validate.md` |
-| Live scripts mask generated passwords/TAPs on screen unless `--show-secrets` | implemented | added after two of Carol's temporary passwords and one TAP were pasted into a chat from Terminal output |
+| Live scripts never display generated passwords/TAPs, in any form (no reveal flag exists) | implemented | the first build printed them in clear; two of Carol's temporary passwords and one TAP were then pasted into a chat from Terminal output. A masked mode with `--show-secrets` followed; that flag is now removed. Only length and character-class count are printed |
 | Read app client secret | **rotated** (live): first secret partially exposed in chat → deleted in the portal, new secret issued, stored in Keychain (length 40 verified) | this conversation; `security find-generic-password` |
 | Carol.Test temporary passwords (2) and TAP (1) exposed via pasted output | **pending your action**, then **verified read-only**: portal reset of Carol's password (do not copy it) and deletion of the TAP method; `python tests/verify_cleanup.py` then proves `lastPasswordChangeDateTime` is later than the last tool-issued reset and no TAP method remains (X1–X3 rows in `live_results_m23.md`) | test account, no licence, no data; TAP was one-time/60 min and has expired regardless |
 | Operator refresh token on disk | implemented: MSAL cache, mode 0600, outside the repo; `entra-mcp logout` deletes it | README trust boundary |
 | Repo pre-commit secret scan | clean: the only `8Q~`/`eyJ` matches are the redaction regexes and test fixtures | `grep` run before the first commit |
-| Published git history scan (every commit, every blob, not just HEAD) | `scripts/scan_history.sh`: exposed values, secret shapes, never-tracked files, optional gitleaks | result recorded below when run |
+| Published git history scan (every commit, every blob, not just HEAD) | `scripts/scan_history.sh`: `git grep` over every commit with path exclusions, exposed values, secret shapes, never-tracked files, pattern self-test, optional gitleaks | run on a fresh clone of `origin/main` at `c8b1239` (6 commits): sections 1–3 all 0 hits / none, **exit 0**. Negative control: a scratch commit with a planted fake secret made the scanner exit 1; after removing it, exit 0 again. The first version of the scanner (commit `7aa4642`) grepped `git log -p` and matched its own pattern lines; it was replaced before any CLEAN result was recorded |
+| Commit `c8b1239` is mislabeled | its message says "X1-X3, history scan clean" but its content is the X1/X2 **FAIL** rows from the 00:30 UTC run (portal cleanup had not happened yet and the scan never ran because the `&&` chain stopped). The next commit carries the real result; history is not rewritten | this table |
 
 ## 4. Temporary Access Pass visibility (M3-5b)
 
 | item | status |
 |---|---|
 | `create_temporary_access_pass` → Graph 201, code returned once, never persisted | **live-tested** (M3-5) |
-| TAP appears in `list_auth_methods` | **pending**: the first live check read immediately after the 201 and saw `['password']` (read-after-write lag, the same effect seen on `accountEnabled`); the check now polls up to 30 s. Confirming it requires creating another TAP, which is a live identity write, so it waits for the next scheduled `live_m23.py` run rather than being re-run tonight |
+| TAP appears in `list_auth_methods` | **live-observed, not yet live-tested by the script**: the first live check read immediately after the 201 and saw `['password']` (read-after-write lag); `verify_cleanup.py` at 00:30 UTC, 25 minutes later, read `['password', 'temporaryAccessPass']` for the same user, so the TAP did become visible with its type and without its code. The script check now polls up to 30 s. Mocked regression test A7 covers the shape (type reported, `isUsable` reported, id/code/lifetime never returned). Closing the live row needs one more TAP write, deliberately deferred |
 
 ## 5. Remaining read-only and device checks
 
@@ -70,7 +71,8 @@ matrix; every live row below cites a run that already happened.
 - [x] Token cache lives outside the repo (`~/Library/Application Support/entra-mcp/`)
 - [x] Client secret only in the macOS Keychain; `config.toml` holds tenant id, client ids and domain (public-safe identifiers)
 - [x] Pre-commit grep for `8Q~` / `eyJ` shows only the redaction regexes and fixtures
-- [ ] `scripts/scan_history.sh` reports CLEAN over the pushed history; GitHub secret scanning + push protection enabled (Settings → Code security)
+- [x] `scripts/scan_history.sh` reports CLEAN (exit 0) over the pushed history at `c8b1239`, negative control exits 1
+- [ ] GitHub secret scanning + push protection enabled (Settings → Code security)
 - [x] Result files name only the fictional test users; admin UPNs masked; GUIDs truncated; no IPs; no response bodies
 - [x] README states the trust boundary and known risks
 - [x] `EVIDENCE.md` is written only by the live scripts and prints its own tool counts
