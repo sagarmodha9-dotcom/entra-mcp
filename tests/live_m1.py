@@ -257,8 +257,8 @@ def write_results(cfg, roles, engine) -> None:
     today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     status = {r[0]: r for r in ROWS}
     md = ["# Milestone 1 acceptance: LIVE tenant results (layer C, plus live repeats of B1/B3/B5/B6)", "",
-          f"Run: {today}  ", f"Tenant: {short(cfg.tenant_id)} ({cfg.domain}, Microsoft 365 Business Premium trial: Entra ID P1 + Intune)  ",
-          f"App: {short(cfg.client_id)} entra-mcp-readonly, client credentials, roles: {', '.join(sorted(roles))}  ",
+          f"Run: {today}  ", f"Tenant: <tenant id> (<tenant>.onmicrosoft.com, Microsoft 365 Business Premium trial: Entra ID P1 + Intune)  "   # identifiers stay out of committed evidence,
+          f"App: <read app id> entra-mcp-readonly, client credentials, roles: {', '.join(sorted(roles))}  ",
           "Path exercised: the same Engine the MCP server runs (schemas -> gate -> allowlisted GETs -> audit), without stdio.", "",
           "These are real Microsoft Graph responses. Mocked results live separately in `tests/unit_results.md`.", "",
           "Sanitized by the results writer: GUIDs truncated, only the fictional test users appear by name, no tokens, "

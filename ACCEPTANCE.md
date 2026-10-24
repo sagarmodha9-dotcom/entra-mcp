@@ -33,7 +33,7 @@ matrix; every live row below cites a run that already happened.
 | Read client still retries 429/503/timeouts with backoff (idempotent GETs) | `graph.GraphClient` | A6 ×3 | C-layer runs recovered from 30 s stalls on `get_last_sign_in` by retry |
 | Sign-in log query has its own budget: 20 s per attempt, one retry, then `status: unavailable` with a reason (never a crash, never a 60 s+ wait) | `GraphClient.BUDGETS["sign_in_logs"]` | A6 budget test (two attempts at 20 s, clear answer) | measured under the budget (two runs, 2026-10-23 00:4x UTC): 17.4 / 12.8 / 10.7 s and 17.4 / **41.3** / 17.1 s. The 41 s call = one 20 s stall + successful retry: the budget behaved as designed and the 61 s case is gone, but the endpoint's own 10–19 s cost means the **"under 20 s" target is not met for this tool and cannot be from the client side** |
 | Hard per-tool wall-clock deadline (`limits.tool_deadline_seconds`, 40 s) covering every Graph request and retry of one call; per-request timeout lowered 30 → 10 s (measured p50 ~1 s, max ~2.5 s); guard lookups that time out fail **closed** (refused), data reads that time out return explicit `unavailable` | `GraphClient.start_deadline/_remaining`, `Engine.run`, `guard.py` | Layer T (11 tests, fake clock + slow transport): no request timeout outlives the deadline, retry loops capped, every read tool bounded when Graph never answers, slow-but-answering endpoints still succeed | **measured once live** (2026-10-23 01:09 UTC): C-LAT PASS, slowest call 31.2 s < 40 s cap. But two `get_last_sign_in` calls still took ~31.2 s **with the 10 s socket timeout confirmed active**, so the stall is not inside the HTTP read: 31.2 = 30.0 + a normal 1.2 s call, and the 30 s constant `requests.timeout` does not cover is name resolution (`getaddrinfo` blocks outside the socket timeout). See next row |
-| Transport is wall-clock bounded: the HTTP call runs in a worker thread and is abandoned after `timeout` + 0.5 s whatever it is stuck on (DNS, TLS, socket); one pooled `requests.Session` keeps connections alive so far fewer lookups happen at all. For writes the existing semantics hold: an abandoned write is `uncertain`, never retried | `graph.requests_transport`, `_session()` | T7: a Session that ignores its timeout and sleeps 4× longer is abandoned at the bound | **not yet measured live**; the next read-only `live_m1.py` run is the test (expect no `get_last_sign_in` call above ~11 s) |
+| Transport is wall-clock bounded (deadline held live; stall cause open): the HTTP call runs in a worker thread and is abandoned after `timeout` + 0.5 s whatever it is stuck on (DNS, TLS, socket); one pooled `requests.Session` keeps connections alive so far fewer lookups happen at all. For writes the existing semantics hold: an abandoned write is `uncertain`, never retried | `graph.requests_transport`, `_session()` | T7: a Session that ignores its timeout and sleeps 4× longer is abandoned at the bound | **measured live 2026-10-24 16:44 UTC** (`tests/live_results.md` C-LAT): slowest call `get_last_sign_in` **30,105 ms**, under the 40 s deadline (PASS) — but the ~30 s stall is still there, so the DNS/transport hypothesis is **not confirmed**. The bound works (nothing exceeded the deadline); the cause of the 30 s is still open — next step is per-request timing inside the tool (the `signInActivity` read vs the sign-in-log cross-check) rather than another transport change |
 
 ## 3. Sanitized output and credential rotation
 
@@ -101,7 +101,7 @@ matrix; every live row below cites a run that already happened.
 - [x] `EVIDENCE.md` is written only by the live scripts and prints its own tool counts
 - [x] Create the GitHub repository and push (`git push -u origin main`)
 - [x] Carol.Test: portal password reset + TAP deletion, verified `python tests/verify_cleanup.py` → X1–X3 PASS (`b12f175`)
-- [ ] Next-day `live_m1.py` run to close C2; next scheduled `live_m23.py` run to close M3-5b
+- [x] `live_m1.py` re-run 2026-10-24 closed C2 (5/7 reads live) · [ ] next `live_m23.py` run to close M3-5b and record M2-6 / M2-7
 - [ ] Device milestone when a disposable device exists
 
 ## 8. Live checks added 2026-10-24 (recorded by `tests/live_m23.py`; pending until its next run)
@@ -116,7 +116,7 @@ Both were mock-tested in W12 (replay ×3, tampered args); the live rows exist so
 ## Exact remaining blockers
 
 1. **A disposable enrolled device.** Options: a macOS VM (UTM/Parallels) enrolled through Company Portal, which first needs an Apple MDM push certificate on the tenant and Intune's MDM authority set; or a Windows 11 VM enrolled manually (no Apple certificate needed). Alice.Test is the licensed user to enrol as. Until then C6, C7, M4-1, M4-2 stay pending and `list_devices`/`get_device`/`sync_device`/`reboot_device` are not described as validated anywhere.
-2. **Graph property lag** on `signInActivity` (documented 24 h): closes itself; re-run `live_m1.py`.
+2. ~~Graph property lag on `signInActivity`~~ closed 2026-10-24: C2 PASS after the test user signed in (`live_m1.py`).
 3. **One more TAP write** to confirm M3-5b under the polling check: deliberately deferred.
 4. ~~Carol.Test credential cleanup~~ closed: X1–X3 PASS in `b12f175`.
 5. **Layer D** measurements: not a blocker for the release, listed so the README never implies it was done.

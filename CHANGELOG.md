@@ -2,9 +2,9 @@
 
 ## v0.1.0 — 2026-10-24 (first tagged release)
 
-**Status, from `EVIDENCE.md`:** 18 tools implemented; 13 live-validated against a real Microsoft 365 tenant (4 of 7 reads,
-9 of 11 approval-gated writes); 5 pending (`get_last_sign_in`, `list_devices`, `get_device`, `sync_device`, `reboot_device`) because
-their preconditions — a sign-in by the test user and an enrolled dedicated test device — have not happened yet. Nothing pending is
+**Status, from `EVIDENCE.md`:** 18 tools implemented; 14 live-validated against a real Microsoft 365 tenant (5 of 7 reads,
+9 of 11 approval-gated writes; `get_last_sign_in` closed on 2026-10-24 once the test user had signed in); 4 pending (`list_devices`,
+`get_device`, `sync_device`, `reboot_device`) because no dedicated test device is enrolled yet. Nothing pending is
 described as working anywhere in the repository.
 
 - Approval-gated MCP server for Entra ID / Intune over Microsoft Graph v1.0: 7 reads, 7 identity writes, 2 device actions, 2 approval tools.

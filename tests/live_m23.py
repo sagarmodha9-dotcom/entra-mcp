@@ -283,8 +283,8 @@ def write_results(cfg, engine) -> None:
     today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     status = {r[0]: r for r in ROWS}
     md = ["# Milestones 2-4 acceptance: LIVE tenant results", "",
-          f"Run: {today}  ", f"Tenant: {short(cfg.tenant_id)} ({cfg.domain})  ",
-          f"Read app: {short(cfg.client_id)} (app-only, guard + verification reads). Write app: {short(cfg.writes_client_id)} "
+          f"Run: {today}  ", f"Tenant: <tenant id> (<tenant>.onmicrosoft.com)  "   # identifiers stay out of committed evidence,
+          f"Read app: <read app id> (app-only, guard + verification reads). Write app: <write app id> "
           "(delegated, device-code sign-in, operator ops.admin).  ",
           "Human gate: every write below stopped at the Terminal for a y/N answer before the approve tool could run.", "",
           "Mocked results for this layer are in `tests/unit_results.md` (layer W). This file holds real Graph responses only.", "",
