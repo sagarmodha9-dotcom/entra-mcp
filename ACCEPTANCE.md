@@ -83,12 +83,19 @@ matrix; every live row below cites a run that already happened.
 
 - [x] `.gitignore` excludes `.venv/`, `audit/*.jsonl`, `audit/*.json`, `tests/tenant.json`, `.env`
 - [x] Token cache lives outside the repo (`~/Library/Application Support/entra-mcp/`)
-- [x] Client secret only in the macOS Keychain; `config.toml` holds tenant id, client ids and domain (public-safe identifiers)
+- [x] Client secret only in the macOS Keychain. `config.toml` (tenant id, client ids, domain, admin UPNs) is gitignored since 2026-10-24
+      and replaced in the repo by `config.example.toml`; the test suite uses a fictional tenant (`tests/fixtures/config.test.toml`).
+      Committed evidence names the tenant as `<tenant>.onmicrosoft.com` and ids as `<tenant id>` / `<read app id>` / `<write app id>`.
+      The identifiers are not credentials (Microsoft documents tenant and application ids as public-safe) and remain in older commits;
+      history is not rewritten. CI (`tests.yml`, job `secrets`) fails if a non-fixture GUID or a real `.onmicrosoft.com` domain is committed.
 - [x] Update zips audited: none contained `audit/`, a token cache, `tenant.json` or `.env`; one (`entra-mcp-demo-hardening.zip`) contained `config.toml` and blanked the writes `client_id` on the Mac (no secret involved, the loader refuses secret-like keys); restored by `sed`, and later zips exclude the file
 - [x] Pre-commit grep for `8Q~` / `eyJ` shows only the redaction regexes and fixtures
 - [x] `scripts/scan_history.sh` reports CLEAN (exit 0) over the pushed history at `c8b1239`, negative control exits 1
 - [x] gitleaks over the full history with the one documented exception: no leaks found
-- [ ] GitHub secret scanning + push protection enabled (Settings → Code security)
+- [ ] GitHub secret scanning + push protection enabled (Settings → Code security) — a repository setting; not verifiable from the code
+- [x] CI on every push/PR (`.github/workflows/tests.yml`, added 2026-10-24): 109 mocked tests (fails if fewer than 100 run), the
+      12-step simulated demo reproduced from the real server code, gitleaks over the full history with the repo config, a planted
+      client-secret negative control that must be caught, `scripts/scan_history.sh`, and the tenant-identifier check above
 - [x] Result files name only the fictional test users; admin UPNs masked; GUIDs truncated; no IPs; no response bodies
 - [x] README states the trust boundary and known risks
 - [x] `EVIDENCE.md` is written only by the live scripts and prints its own tool counts
@@ -96,6 +103,15 @@ matrix; every live row below cites a run that already happened.
 - [x] Carol.Test: portal password reset + TAP deletion, verified `python tests/verify_cleanup.py` → X1–X3 PASS (`b12f175`)
 - [ ] Next-day `live_m1.py` run to close C2; next scheduled `live_m23.py` run to close M3-5b
 - [ ] Device milestone when a disposable device exists
+
+## 8. Live checks added 2026-10-24 (recorded by `tests/live_m23.py`; pending until its next run)
+
+| id | check | status |
+|---|---|---|
+| M2-6 | replay: the approval id executed in M3-3 is presented to `approve` again → `not_executable`, zero write requests | pending next run |
+| M2-7 | tamper: a human-approved proposal is edited on disk (target changed) → digest check → `tampered`, status `denied`, zero write requests | pending next run |
+
+Both were mock-tested in W12 (replay ×3, tampered args); the live rows exist so the matrix stops saying "not exercised live".
 
 ## Exact remaining blockers
 

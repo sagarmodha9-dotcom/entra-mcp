@@ -91,6 +91,12 @@ def main() -> int:
     engine = Engine(cfg, read, AuditLog(audit_path))
     store = ApprovalStore(cfg.approvals_path, cfg.approval_ttl_seconds)
     engine.writes = WriteEngine(cfg, read, engine.guard, engine.audit, store, delegated_token_provider(cfg))
+    made_clients: list = []                       # every write client the engine creates, so write requests can be counted
+    _orig_factory = engine.writes._factory
+    def _counting_factory(tp):
+        c = _orig_factory(tp); made_clients.append(c); return c
+    engine.writes._factory = _counting_factory
+    write_calls = lambda: sum(c.calls for c in made_clients)   # noqa: E731
     print(f"tenant {short(cfg.tenant_id)}  read app {short(cfg.client_id)}  write app {short(cfg.writes_client_id)}\n")
 
     # ---- M2-1 operator identity and token type
@@ -162,8 +168,38 @@ def main() -> int:
        lambda o: (o.get("accountEnabled") is False, f"read-back accountEnabled={o.get('accountEnabled')}"))
     do("M3-2", "enable_account", {"upn": bob, "reason": "LIVE-M3-2 re-enable test user"},
        lambda o: (o.get("accountEnabled") is True, f"read-back accountEnabled={o.get('accountEnabled')}"))
-    do("M3-3", "revoke_sessions", {"upn": carol, "reason": "LIVE-M3-3 revoke test user sessions"},
-       lambda o: (o.get("revoked") is True, f"value={o.get('revoked')} (takes effect within minutes, documented)"))
+    m33 = do("M3-3", "revoke_sessions", {"upn": carol, "reason": "LIVE-M3-3 revoke test user sessions"},
+             lambda o: (o.get("revoked") is True, f"value={o.get('revoked')} (takes effect within minutes, documented)"))
+
+    # ---- M2-6 replay after execution (live): the SAME approval id, approved and executed above, is presented again.
+    # Expected: refused as single-use, and the write client sends nothing. Safe — the executed call was a session revoke on a test user.
+    if m33:
+        before_w, before_r = write_calls(), read.calls
+        try:
+            engine.run("approve", {"approval_id": m33["approval_id"]})
+            row("M2-6", "replay of an executed proposal refused", False, "executed twice")
+        except ToolError as ex:
+            row("M2-6", "replay of an executed proposal refused (single use), zero write requests",
+                ex.code == "not_executable" and write_calls() == before_w, f"{ex.code}; write_requests={write_calls() - before_w} read_requests={read.calls - before_r}")
+
+    # ---- M2-7 tampered proposal (live): a proposal is human-approved, then its stored record is edited on disk (as an OS-level
+    # actor could do) to point at a different user. Expected: the SHA-256 digest check denies it at claim time; no Graph write.
+    try:
+        p = engine.run("revoke_sessions", {"upn": carol, "reason": "LIVE-M2-7 integrity check"})
+        store.human_approve(p["approval_id"], os.environ.get("USER", "operator"))
+        raw = json.loads(cfg.approvals_path.read_text()); rec = raw[p["approval_id"]]
+        rec["args"]["upn"] = bob; rec["target"] = rec["target"].replace("carol", "bob")     # tamper the stored, approved record
+        cfg.approvals_path.write_text(json.dumps(raw, indent=1))
+        before_w = write_calls()
+        try:
+            engine.run("approve", {"approval_id": p["approval_id"]})
+            row("M2-7", "tampered proposal refused", False, "executed a modified proposal")
+        except ToolError as ex:
+            now_status = store.get(p["approval_id"]).status
+            row("M2-7", "tampered (edited-on-disk) approved proposal refused by the digest check and denied, zero write requests",
+                ex.code == "tampered" and now_status == "denied" and write_calls() == before_w, f"{ex.code}; status={now_status}; write_requests={write_calls() - before_w}")
+    except ToolError as ex:
+        row("M2-7", "tampered proposal check", False, f"setup failed: {ex.code}: {ex}")
     pw_before = engine.run("get_user", {"upn": carol}).get("lastPasswordChangeDateTime")
     o = do("M3-4", "reset_password", {"upn": carol, "reason": "LIVE-M3-4 admin reset on test user"},
            lambda o: (o.get("graph_accepted") == 202 and len(o.get("temporaryPassword", "")) >= 20,

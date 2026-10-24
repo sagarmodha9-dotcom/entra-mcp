@@ -1,0 +1,31 @@
+# Test configuration: a fictional tenant. The unit/integration suite runs against the in-repo fake Graph transport with this
+# file; no real tenant identifier, account or device appears anywhere in the committed tests or evidence.
+[tenant]
+tenant_id = "00000000-0000-4000-8000-000000000000"
+client_id = "00000000-0000-4000-8000-000000000001"
+domain = "contoso-test.onmicrosoft.com"
+
+[keychain]
+service = "entra-mcp-readonly"
+account = "test"
+
+[guard]
+protected_upns = ["admin@contoso-test.onmicrosoft.com", "ops.admin@contoso-test.onmicrosoft.com"]
+cache_seconds = 60
+
+[devices]
+test_device_ids = []
+
+[limits]
+timeout_seconds = 10
+page_size = 20
+max_retries = 3
+tool_deadline_seconds = 40
+
+[audit]
+path = "audit/entra-mcp.jsonl"
+
+[writes]
+client_id = "00000000-0000-4000-8000-000000000002"
+token_cache = "~/Library/Application Support/entra-mcp/msal_cache.bin"
+approvals = "audit/approvals.json"

@@ -5,6 +5,12 @@ questions from a live Microsoft Entra ID + Intune tenant over Microsoft Graph v1
 they last sign in, what groups and MFA methods do they have, what did their recent sign-ins look like, what devices
 do they own.
 
+[![tests](https://github.com/sagarmodha9-dotcom/entra-mcp/actions/workflows/tests.yml/badge.svg)](https://github.com/sagarmodha9-dotcom/entra-mcp/actions/workflows/tests.yml)
+
+**For a reviewer in a hurry:** [what it does](#tools) · [how a write happens](#how-a-write-happens) · [security design](#security-design) ·
+[what is live-tested vs simulated](#evidence) ([EVIDENCE.md](EVIDENCE.md), [ACCEPTANCE.md](ACCEPTANCE.md)) · [demo](#demo-simulated-2-minutes) ·
+[setup](#setup-15-minutes). Nothing in this README claims a tool works unless the evidence file recorded it.
+
 **Seven read tools (milestone 1), plus an approval-gated write path (milestones 2–4): 2 approval tools, 7
 identity writes, 2 device actions; 18 tools in total.** Every request goes through one path: MCP client → tool
 registry (strict schemas) → policy gate (endpoint allowlist + target guard) → Graph client → audit log. There is
@@ -15,7 +21,9 @@ live-validated" line. Nothing in this README claims a tool works unless that fil
 category (implemented / mock-tested / live-tested / pending / blocked), the remaining blockers and the release
 checklist are in `ACCEPTANCE.md`. A ten-minute walkthrough of what a reviewer sees is in `DEMO.md`.
 
-![architecture](docs/architecture.svg)
+![architecture](docs/architecture.png)
+
+<sub>Also as SVG: [docs/architecture.svg](docs/architecture.svg)</sub>
 
 ## Demo (simulated, 2 minutes)
 
@@ -192,13 +200,15 @@ entra-mcp deny apr_<id>
    admin consent; create a client secret.
 2. Secret into the Keychain (never paste it anywhere else):
    `security add-generic-password -U -s entra-mcp-readonly -a <you> -w '<secret>'`
-3. `config.toml`: tenant id, client id, tenant domain, Keychain account, protected UPNs (your admins).
+3. `cp config.example.toml config.toml` and fill in tenant id, client ids, tenant domain, Keychain account and protected UPNs
+   (your admins). `config.toml` is gitignored: it identifies a real tenant, so it never enters the repository; the test suite
+   uses `tests/fixtures/config.test.toml` (a fictional tenant) and needs no tenant at all.
 4. Install and check:
    ```
    python3.12 -m venv .venv && source .venv/bin/activate
    pip install -e ".[test]"
    entra-mcp --check          # config ok, secret ok, 7 tools
-   pytest                     # layers A + B, no tenant needed
+   pytest                     # 109 mocked tests (layers A, B, T, W), fictional tenant, no network
    python tests/live_m1.py    # layer C against your tenant
    ```
 5. Claude Desktop → Settings → Developer → Edit Config, add:

@@ -19,7 +19,7 @@ from entra_mcp.tools import ToolError
 # ---------------------------------------------------------------- B1 target guard
 def test_b1_deny_listed_admin_refused_with_zero_graph_calls(engine):
     for tool, args in [("get_user", {"upn": ADMIN}), ("get_sign_in_logs", {"upn": ADMIN}),
-                       ("list_auth_methods", {"upn": "SagarModha@ModhaAILabs.onmicrosoft.com"}),
+                       ("list_auth_methods", {"upn": "admin@contoso-test.onmicrosoft.com"}),
                        ("list_devices", {"upn": ADMIN})]:
         with pytest.raises(ToolError) as ei:
             engine.run(tool, args)
@@ -78,19 +78,19 @@ def test_b2_injected_device_name_in_sign_in_log_is_quoted_not_acted_on(engine):
 
 # ---------------------------------------------------------------- B3 injection via arguments
 @pytest.mark.parametrize("upn", [
-    "alice.test/../sagarmodha@modhaailabs.onmicrosoft.com",
-    "alice.test@modhaailabs.onmicrosoft.com/memberOf",
-    "alice.test$@modhaailabs.onmicrosoft.com",
-    "alice.test%40modhaailabs.onmicrosoft.com",
-    "alice test@modhaailabs.onmicrosoft.com",
-    "alice.test@modhaailabs.onmicrosoft.com'",
-    "alice.test@modhaailabs.onmicrosoft.com or 1 eq 1",
+    "alice.test/../admin@contoso-test.onmicrosoft.com",
+    "alice.test@contoso-test.onmicrosoft.com/memberOf",
+    "alice.test$@contoso-test.onmicrosoft.com",
+    "alice.test%40contoso-test.onmicrosoft.com",
+    "alice test@contoso-test.onmicrosoft.com",
+    "alice.test@contoso-test.onmicrosoft.com'",
+    "alice.test@contoso-test.onmicrosoft.com or 1 eq 1",
     "alice.test@contoso.com",
-    "x' or userId ne '@modhaailabs.onmicrosoft.com",
-    "alice.test@modhaailabs.onmicrosoft.com?$select=*",
-    "alice.test@modhaailabs.onmicrosoft.com#",
-    ".alice@modhaailabs.onmicrosoft.com",
-    "a..b@modhaailabs.onmicrosoft.com",
+    "x' or userId ne '@contoso-test.onmicrosoft.com",
+    "alice.test@contoso-test.onmicrosoft.com?$select=*",
+    "alice.test@contoso-test.onmicrosoft.com#",
+    ".alice@contoso-test.onmicrosoft.com",
+    "a..b@contoso-test.onmicrosoft.com",
     "",
 ])
 def test_b3_hostile_upns_rejected_by_schema_before_url_builder(engine, upn):
@@ -101,7 +101,7 @@ def test_b3_hostile_upns_rejected_by_schema_before_url_builder(engine, upn):
 
 
 def test_b3_type_confusion_rejected(engine):
-    for args in [{"upn": ["alice.test@modhaailabs.onmicrosoft.com"]}, {"upn": {"$ref": "x"}},
+    for args in [{"upn": ["alice.test@contoso-test.onmicrosoft.com"]}, {"upn": {"$ref": "x"}},
                  {"upn": ALICE, "days": "7; drop"}, {"upn": ALICE, "top": 2.5}, {"upn": ALICE, "top": True}]:
         with pytest.raises(ToolError) as ei:
             engine.run("get_sign_in_logs", args)

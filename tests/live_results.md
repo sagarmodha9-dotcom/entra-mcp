@@ -1,8 +1,8 @@
 # Milestone 1 acceptance: LIVE tenant results (layer C, plus live repeats of B1/B3/B5/B6)
 
 Run: 2026-10-23 01:11 UTC  
-Tenant: 62130626… (modhaailabs.onmicrosoft.com, Microsoft 365 Business Premium trial: Entra ID P1 + Intune)  
-App: e3b405e7… entra-mcp-readonly, client credentials, roles: AuditLog.Read.All, DeviceManagementManagedDevices.Read.All, Directory.Read.All, User.Read.All, UserAuthenticationMethod.Read.All  
+Tenant: <tenant id> (<tenant>.onmicrosoft.com, Microsoft 365 Business Premium trial: Entra ID P1 + Intune)  
+App: <read app id> entra-mcp-readonly, client credentials, roles: AuditLog.Read.All, DeviceManagementManagedDevices.Read.All, Directory.Read.All, User.Read.All, UserAuthenticationMethod.Read.All  
 Path exercised: the same Engine the MCP server runs (schemas -> gate -> allowlisted GETs -> audit), without stdio.
 
 These are real Microsoft Graph responses. Mocked results live separately in `tests/unit_results.md`.
@@ -21,7 +21,7 @@ Sanitized by the results writer: GUIDs truncated, only the fictional test users 
 | C5b | sign-in rows carry no IP address | PASS | checked result JSON |
 | C6 | list_devices | PENDING | endpoint 200, devices=0 (no dedicated test device enrolled yet; stays pending by design) |
 | C7 | get_device | PENDING | pending with C6 |
-| C8 | unknown user maps to not_found | PASS | not_found: Not found (404): no user or device with that identifier in this tenant. (Request_ResourceNotFound: Resource '<masked>@modhaailabs.onmicrosoft.com' does not exist or one of its queried reference-property objects are not present.) |
+| C8 | unknown user maps to not_found | PASS | not_found: Not found (404): no user or device with that identifier in this tenant. (Request_ResourceNotFound: Resource '<masked>@<tenant>.onmicrosoft.com' does not exist or one of its queried reference-property objects are not present.) |
 | C9 | admin target refused by the guard (B1 live) | PASS | protected; graph_calls=0; audit decision=refused |
 | B3 | hostile arguments rejected at the server with zero Graph calls (live) | PASS | rejected 11/11; graph_calls=0 |
 | B6 | audit log holds no token or secret after the run (live) | PASS | 117 audit lines scanned |

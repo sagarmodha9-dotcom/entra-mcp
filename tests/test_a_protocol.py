@@ -45,7 +45,7 @@ async def test_a1_handshake_lists_exactly_seven_tools(stdio_env):
             body = json.loads(r.content[0].text)
             assert body["accountEnabled"] is True and body["department"] == "IT Support"
             # and a refusal comes back as a structured error result, not a protocol failure
-            r = await s.call_tool("get_user", {"upn": "SagarModha@ModhaAILabs.onmicrosoft.com"})
+            r = await s.call_tool("get_user", {"upn": "admin@contoso-test.onmicrosoft.com"})
             assert r.is_error and json.loads(r.content[0].text)["error"] == "protected"
 
 
@@ -96,7 +96,7 @@ def test_a3_every_tool_hits_only_its_allowlisted_urls(engine):
             assert any(url.split("?")[0] == allowed_prefixes[t] or url.split("?")[0].startswith(allowed_prefixes[t].rsplit("/", 1)[0] + "/")
                        for t in templates_for_tool), f"{tool} produced a URL outside its allowlist: {url}"
     # exact URLs for the two most sensitive builders
-    assert build_url("user_by_upn", upn=ALICE) == f"{GRAPH}/users/alice.test%40modhaailabs.onmicrosoft.com?$select=" + \
+    assert build_url("user_by_upn", upn=ALICE) == f"{GRAPH}/users/alice.test%40contoso-test.onmicrosoft.com?$select=" + \
         "id,userPrincipalName,displayName,accountEnabled,jobTitle,department,createdDateTime,lastPasswordChangeDateTime,onPremisesSyncEnabled,usageLocation"
     assert build_url("sign_in_logs", id=ALICE_ID, since="2026-10-15T00:00:00Z", top=20).startswith(
         f"{GRAPH}/auditLogs/signIns?$filter=userId%20eq%20%27{ALICE_ID}%27%20and%20createdDateTime%20ge%202026-10-15T00%3A00%3A00Z&$top=20&$select=")
@@ -182,7 +182,7 @@ def test_a7_every_call_including_refusals_writes_one_line_with_documented_fields
     with pytest.raises(ToolError):
         engine.run("get_user", {"upn": EVE})                              # refused (holds a role)
     with pytest.raises(ToolError):
-        engine.run("get_user", {"upn": "nobody.test@modhaailabs.onmicrosoft.com"})   # graph 404
+        engine.run("get_user", {"upn": "nobody.test@contoso-test.onmicrosoft.com"})   # graph 404
     lines = engine.audit.read_all()
     assert len(lines) == 4
     assert [l["decision"] for l in lines] == ["allowed", "invalid", "refused", "error"]

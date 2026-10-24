@@ -38,19 +38,19 @@ Result: **109 passed, 0 failed, 109 tests**
 | B server authorization | `test_b1_role_assignment_and_role_assignable_group_refuse` | passed |
 | B server authorization | `test_b2_injected_department_is_returned_as_data_and_causes_no_second_request` | passed |
 | B server authorization | `test_b2_injected_device_name_in_sign_in_log_is_quoted_not_acted_on` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test/../sagarmodha@modhaailabs.onmicrosoft.com]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@modhaailabs.onmicrosoft.com/memberOf]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test$@modhaailabs.onmicrosoft.com]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test%40modhaailabs.onmicrosoft.com]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice test@modhaailabs.onmicrosoft.com]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@modhaailabs.onmicrosoft.com']` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@modhaailabs.onmicrosoft.com or 1 eq 1]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test/../admin@contoso-test.onmicrosoft.com]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@contoso-test.onmicrosoft.com/memberOf]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test$@contoso-test.onmicrosoft.com]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test%40contoso-test.onmicrosoft.com]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice test@contoso-test.onmicrosoft.com]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@contoso-test.onmicrosoft.com']` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@contoso-test.onmicrosoft.com or 1 eq 1]` | passed |
 | B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@contoso.com]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[x' or userId ne '@modhaailabs.onmicrosoft.com]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@modhaailabs.onmicrosoft.com?$select=*]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@modhaailabs.onmicrosoft.com#]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[.alice@modhaailabs.onmicrosoft.com]` | passed |
-| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[a..b@modhaailabs.onmicrosoft.com]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[x' or userId ne '@contoso-test.onmicrosoft.com]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@contoso-test.onmicrosoft.com?$select=*]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[alice.test@contoso-test.onmicrosoft.com#]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[.alice@contoso-test.onmicrosoft.com]` | passed |
+| B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[a..b@contoso-test.onmicrosoft.com]` | passed |
 | B server authorization | `test_b3_hostile_upns_rejected_by_schema_before_url_builder[]` | passed |
 | B server authorization | `test_b3_type_confusion_rejected` | passed |
 | B server authorization | `test_b4_sign_in_filter_is_built_from_typed_fields_only` | passed |

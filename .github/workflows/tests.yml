@@ -1,0 +1,60 @@
+name: tests
+# Mocked test suite (109 tests: protocol, authorization, writes/approvals, timeouts; 8-thread race and prompt-injection cases
+# included), the full-history secret scan with a planted-secret negative control, and the simulated demo transcript.
+# Nothing here talks to a Microsoft tenant: live validation is run by a person with `tests/live_m1.py` / `tests/live_m23.py`
+# and recorded in EVIDENCE.md.
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[test]"
+      - name: pytest (mocked Graph transport, fictional tenant config)
+        run: |
+          python -m pytest -q --junitxml=pytest.xml 2>&1 | tee pytest.log | tail -5
+          python - <<'PY'
+          import re, pathlib
+          log = pathlib.Path("pytest.log").read_text()
+          m = re.search(r"(\d+) passed", log); n = int(m.group(1)) if m else 0
+          print("tests passed:", n)
+          raise SystemExit(0 if n >= 100 and "failed" not in log and "error" not in log.lower() else 1)   # a shrunken or red suite is a failure
+          PY
+      - name: Demo transcript reproduces from the real server code (fake transport)
+        run: |
+          python demo/run_demo.py > demo.log 2>&1 || { tail -40 demo.log; exit 1; }
+          python - <<'PY'
+          import json; t = json.load(open("demo/transcript.json")); print("demo steps:", len(t["steps"]), "tenant:", t["tenant_id"])
+          assert len(t["steps"]) == 12 and t["tenant_id"].startswith("00000000"), "demo must be the 12-step simulated run on the zero tenant"
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "pytest-${{ github.run_id }}", path: "pytest.xml", if-no-files-found: ignore }
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: gitleaks over every commit, with the repo's config
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar xz gitleaks
+          ./gitleaks git . --config .gitleaks.toml --redact --log-opts="--all" --report-format json --report-path gitleaks.json --exit-code 2 -v 2>&1 | tail -5
+          test -f gitleaks.json || echo "[]" > gitleaks.json
+          python3 -c "import json; r=json.load(open('gitleaks.json')); print('findings:', len(r)); raise SystemExit(1 if r else 0)"
+      - name: Negative control — a planted client-secret shape must be caught
+        run: |
+          printf 'planted = "Abc8Q~%s"\n' "$(python3 -c "print('Z'*40)")" > planted_control.py
+          if ./gitleaks dir . --config .gitleaks.toml --no-banner --exit-code 2 >/dev/null 2>&1; then echo "::error::scanner did not catch the planted secret"; exit 1; fi
+          rm planted_control.py; echo "negative control caught"
+      - name: History scan (never-tracked files, exposed values, secret shapes)
+        run: bash scripts/scan_history.sh
+      - name: No real tenant identifiers in the tree
+        # The real config.toml is gitignored; committed evidence names the tenant as <tenant>.onmicrosoft.com.
+        run: |
+          if git grep -nE "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" -- . ':!tests/' ':!demo/' ':!docs/' | grep -vE "00000000-0000|a1a1a1a1|c3c3c3c3|11111111-2222|d55e0f39|request_id"; then echo "::error::a GUID that is not a documented fixture value is committed"; exit 1; fi
+          if git grep -niE "[a-z0-9-]+\.onmicrosoft\.com" -- . | grep -viE "contoso(-test|-demo)?\.onmicrosoft\.com|<tenant>\.onmicrosoft\.com|<yourtenant>\.onmicrosoft\.com|yourtenant\.onmicrosoft\.com"; then echo "::error::a real tenant domain is committed"; exit 1; fi
+          echo "clean"

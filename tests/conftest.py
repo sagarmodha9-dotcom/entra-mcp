@@ -19,14 +19,14 @@ from entra_mcp.graph import GraphClient  # noqa: E402
 from entra_mcp.schemas import set_domain  # noqa: E402
 from entra_mcp.tools import Engine  # noqa: E402
 
-DOMAIN = "modhaailabs.onmicrosoft.com"
+DOMAIN = "contoso-test.onmicrosoft.com"
 ALICE = "alice.test@" + DOMAIN
 ALICE_ID = "d55e0f39-0000-4000-8000-000000000001"
 BOB = "bob.test@" + DOMAIN
 BOB_ID = "c0454a86-0000-4000-8000-000000000002"
 CAROL = "carol.test@" + DOMAIN
 CAROL_ID = "de3907dd-0000-4000-8000-000000000004"
-ADMIN = "sagarmodha@" + DOMAIN          # on the deny list in config.toml
+ADMIN = "admin@" + DOMAIN               # on the deny list in tests/fixtures/config.test.toml
 EVE = "eve.test@" + DOMAIN              # holds a directory role in the fixture (not on the deny list)
 EVE_ID = "ee000000-0000-4000-8000-000000000003"
 DEVICE_ID = "11111111-2222-4333-8444-555555555555"
@@ -107,7 +107,7 @@ def write_fixture():
 
 @pytest.fixture
 def cfg():
-    return load_config(ROOT / "config.toml")
+    return load_config(ROOT / "tests" / "fixtures" / "config.test.toml")
 
 
 @pytest.fixture
@@ -129,7 +129,7 @@ def engine(cfg, fake, tmp_path):
 def stdio_env(write_fixture, tmp_path):
     env = dict(os.environ)
     env["ENTRA_MCP_FAKE_GRAPH"] = str(write_fixture)
-    env["ENTRA_MCP_CONFIG"] = str(ROOT / "config.toml")
+    env["ENTRA_MCP_CONFIG"] = str(ROOT / "tests" / "fixtures" / "config.test.toml")
     env["PYTHONPATH"] = str(ROOT / "src")
     env["ENTRA_MCP_AUDIT"] = str(tmp_path / "stdio-audit.jsonl")
     return env

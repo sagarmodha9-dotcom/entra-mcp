@@ -9,7 +9,7 @@ trial tenant with fictional test users; the outputs quoted are from the recorded
 $ entra-mcp --check
 entra-mcp 0.1.0: config ok, secret ok, 18 tools (read + write), audit -> ~/entra-mcp/audit/entra-mcp.jsonl
 $ entra-mcp whoami
-{'username': 'ops.admin@ModhaAILabs.onmicrosoft.com'}
+{'username': 'ops.admin@<tenant>.onmicrosoft.com'}
 $ pytest -q
 95 passed
 ```
