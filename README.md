@@ -11,6 +11,10 @@ do they own.
 [what is live-tested vs simulated](#evidence) ([EVIDENCE.md](EVIDENCE.md), [ACCEPTANCE.md](ACCEPTANCE.md)) · [demo](#demo-simulated-2-minutes) ·
 [setup](#setup-15-minutes). Nothing in this README claims a tool works unless the evidence file recorded it.
 
+**Status (from `EVIDENCE.md`, last live runs 2026-10-22 / 2026-10-24): 14 of 18 tools live-validated on a real tenant** — 5 of 7 reads,
+9 of 11 approval-gated writes. The 4 device tools (`list_devices`, `get_device`, `sync_device`, `reboot_device`) are pending until a
+dedicated test device is enrolled; they are not described as working anywhere.
+
 **Seven read tools (milestone 1), plus an approval-gated write path (milestones 2–4): 2 approval tools, 7
 identity writes, 2 device actions; 18 tools in total.** Every request goes through one path: MCP client → tool
 registry (strict schemas) → policy gate (endpoint allowlist + target guard) → Graph client → audit log. There is

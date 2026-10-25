@@ -8,3 +8,7 @@ audit/*.json
 
 # real tenant configuration (copy config.example.toml); tenant/app ids identify a real tenant and stay local
 config.toml
+
+# build/test artefacts
+*.egg-info/
+.pytest_cache/
