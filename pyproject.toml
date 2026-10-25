@@ -3,6 +3,8 @@ name = "entra-mcp"
 version = "0.1.0"
 description = "Approval-gated MCP server for Microsoft Entra ID and Intune over Microsoft Graph: 7 reads, 7 identity writes behind human approval, 2 device actions"
 requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     "mcp>=2.0",
     "msal>=1.31",
@@ -18,7 +20,7 @@ demo = ["playwright>=1.50"]        # demo/record.py; then `python -m playwright 
 entra-mcp = "entra_mcp.server:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]   # PEP 639 license expression
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

@@ -255,3 +255,7 @@ Milestone 2: second app registration (delegated, device-code flow), approval obj
 revoke sessions, group add/remove). Milestone 4: Intune `sync_device` and `reboot_device` on listed test devices
 only; wipe and retire are never registered as tools. Each milestone gets its own permissions, live results and
 evidence rows before anything is described as working.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
